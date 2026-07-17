@@ -98,6 +98,15 @@ git remote add origin git@github.com:YOU/coworking-frens.git
 git push -u origin main
 ```
 
+## Troubleshooting
+
+- **`prepared statement "s0" already exists`** (or similar) at runtime: Neon's pooler is
+  in transaction mode. Append `&pgbouncer=true` to `DATABASE_URL` (the pooled one only,
+  not `DIRECT_URL`).
+- **Build fails on `prisma migrate deploy`**: make sure both `DATABASE_URL` and
+  `DIRECT_URL` are set for the environment being built (Production, and Preview if you use
+  PR previews).
+
 ## Custom domain
 
 Vercel → Settings → Domains → add your domain and follow the DNS steps. Then update
