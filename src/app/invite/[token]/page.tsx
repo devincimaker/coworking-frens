@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -27,9 +28,9 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         Friends see each other&apos;s cowork days and can claim a desk.
       </p>
       {alreadyFriends ? (
-        <a href="/" className="btn-ghost mt-6">
+        <Link href="/" className="btn-ghost mt-6">
           Back to the feed
-        </a>
+        </Link>
       ) : (
         <form action={acceptInvite} className="mt-6">
           <input type="hidden" name="token" value={token} />

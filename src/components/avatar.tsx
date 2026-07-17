@@ -19,8 +19,16 @@ export function Avatar({
 }) {
   const cls = `shrink-0 rounded-full ${ring ? "ring-2 ring-card" : ""}`;
   if (image) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={image} alt={name ?? ""} width={size} height={size} className={cls} />;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={image}
+        alt={name ?? ""}
+        width={size}
+        height={size}
+        className={`${cls} object-cover`}
+      />
+    );
   }
   const initial = (name ?? "?").trim().charAt(0).toUpperCase();
   return (

@@ -23,12 +23,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body className={`${fraunces.variable} ${karla.variable} antialiased`}>
         <div className="mx-auto max-w-2xl px-4 pb-24">
-          <header className="flex items-center justify-between py-5">
+          <header className="flex flex-wrap items-center justify-between gap-3 py-5">
             <Link href="/" className="font-display text-xl font-semibold italic tracking-tight">
               coworking <span className="text-clay">frens</span>
             </Link>
             {session?.user && (
-              <nav className="flex items-center gap-1 text-sm font-bold">
+              <nav className="flex flex-wrap items-center justify-end gap-1 text-sm font-bold">
                 <Link href="/" className="rounded-full px-3 py-1.5 hover:bg-butter/60">
                   Feed
                 </Link>
@@ -37,6 +37,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </Link>
                 <Link href="/friends" className="rounded-full px-3 py-1.5 hover:bg-butter/60">
                   Friends
+                </Link>
+                <Link href="/profile" className="rounded-full px-3 py-1.5 hover:bg-butter/60">
+                  Profile
                 </Link>
                 <form
                   action={async () => {

@@ -18,6 +18,64 @@ function revalidateAll() {
   revalidatePath("/friends");
 }
 
+type ProfileFormState = {
+  status: "idle" | "success" | "error";
+  message: string;
+};
+
+type ImageUrlResult =
+  | { ok: true; image: string | null }
+  | { ok: false; message: string };
+
+function normalizeName(raw: FormDataEntryValue | null) {
+  return String(raw ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function normalizeImageUrl(raw: FormDataEntryValue | null): ImageUrlResult {
+  const value = String(raw ?? "").trim();
+  if (!value) return { ok: true, image: null };
+  if (value.length > 500) {
+    return { ok: false, message: "Use an image URL under 500 characters." };
+  }
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return { ok: false, message: "Use an http or https image URL." };
+    }
+    return { ok: true, image: url.toString() };
+  } catch {
+    return { ok: false, message: "Use a valid image URL." };
+  }
+}
+
+// --- Profile ---
+
+export async function updateProfile(
+  _prevState: ProfileFormState,
+  formData: FormData
+): Promise<ProfileFormState> {
+  const user = await requireUser();
+  const name = normalizeName(formData.get("name"));
+  const result = normalizeImageUrl(formData.get("image"));
+
+  if (!name) return { status: "error", message: "Add a display name." };
+  if (name.length > 80) return { status: "error", message: "Keep the name under 80 characters." };
+  if (!result.ok) return { status: "error", message: result.message };
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { name, image: result.image },
+  });
+
+  revalidateAll();
+  revalidatePath("/profile");
+
+  return { status: "success", message: "Profile saved." };
+}
+
 // --- Place ---
 
 export async function savePlace(formData: FormData) {
