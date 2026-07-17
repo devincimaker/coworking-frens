@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Coworking Frens
 
-## Getting Started
+A private webapp for friends to open their homes as cowork spots. No strangers, no
+payments — the attendee list is the product. See [`SPEC.md`](./SPEC.md) for the full
+product spec and [`DEPLOY.md`](./DEPLOY.md) to ship it.
 
-First, run the development server:
+## What it does
+
+- **Friends & circles.** Personal invite links create mutual friendships. Organize
+  friends into private circles (audience selectors — nobody sees your circles but you).
+- **Hosting.** Set up your place (address, arrival notes, amenities, capacity). Open it
+  as one-off days or recurring weekly rules that auto-open 3 weeks ahead.
+- **Joining.** See upcoming days you're invited to, claim a spot first-come first-served,
+  see who else is coming.
+- **Email.** Join/leave, day-opened, cancellation, and a day-before reminder.
+
+All times are Argentina-local (MVP assumption — no per-user timezones).
+
+## Stack
+
+Next.js App Router · Prisma · Postgres · NextAuth v5 (Google) · Resend · Tailwind v4.
+
+## Local development
+
+The app targets Postgres. For local work, point it at a Neon dev branch, or run a local
+Postgres:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env          # fill DATABASE_URL / DIRECT_URL / AUTH_SECRET
+npx prisma migrate deploy     # create tables
+npm run dev                   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+In development a **passwordless dev login** is available on the sign-in page (no Google
+setup needed), and `GET /api/dev/seed` creates a sample friend group (Ana, Marco, Lea)
+with two hosted places to click around. Both are disabled when `NODE_ENV=production`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Key paths
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Path                     | What                                             |
+| ------------------------ | ------------------------------------------------ |
+| `src/auth.ts`            | NextAuth config (Google + dev-login)             |
+| `src/lib/actions.ts`     | All server actions (join, host, circles, invite) |
+| `src/lib/days.ts`        | Day creation + audience snapshot + materializer  |
+| `src/lib/queries.ts`     | Feed / day / host / circle reads                 |
+| `src/app/api/cron`       | Daily materialize + reminder job                 |
+| `prisma/schema.prisma`   | Data model                                       |

@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled connection (Neon's -pooler host) for the serverless runtime.
+  url       = env("DATABASE_URL")
+  // Direct connection for migrations (prisma migrate deploy). On Neon this is the
+  // non-pooled URL; set it equal to DATABASE_URL when there's no separate pooler.
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  inviteToken   String    @unique @default(cuid())
+  createdAt     DateTime  @default(now())
+
+  accounts          Account[]
+  sessions          Session[]
+  place             Place?
+  circles           Circle[]
+  circleMemberships CircleMember[]
+  rules             AvailabilityRule[]
+  hostedDays        CoworkDay[]
+  attendances       Attendance[]
+  audienceOf        DayAudience[]
+  friendshipsA      Friendship[]       @relation("FriendA")
+  friendshipsB      Friendship[]       @relation("FriendB")
+}
+
+// Always stored normalized: aId < bId (lexicographic), enforced in app code.
+model Friendship {
+  id        String   @id @default(cuid())
+  aId       String
+  bId       String
+  createdAt DateTime @default(now())
+  a         User     @relation("FriendA", fields: [aId], references: [id], onDelete: Cascade)
+  b         User     @relation("FriendB", fields: [bId], references: [id], onDelete: Cascade)
+
+  @@unique([aId, bId])
+}
+
+// Private to its owner; members must be friends of the owner (enforced in app code).
+model Circle {
+  id        String             @id @default(cuid())
+  ownerId   String
+  name      String
+  createdAt DateTime           @default(now())
+  owner     User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members   CircleMember[]
+  rules     AvailabilityRule[]
+
+  @@unique([ownerId, name])
+}
+
+model CircleMember {
+  id       String @id @default(cuid())
+  circleId String
+  userId   String
+  circle   Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([circleId, userId])
+}
+
+model Place {
+  id              String      @id @default(cuid())
+  hostId          String      @unique
+  nickname        String
+  address         String
+  arrivalNotes    String      @default("")
+  amenities       String      @default("") // free-text tags, comma-separated
+  defaultCapacity Int         @default(4)
+  host            User        @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  days            CoworkDay[]
+}
+
+model AvailabilityRule {
+  id        String   @id @default(cuid())
+  hostId    String
+  weekdays  String // csv of 0(Sun)-6(Sat), e.g. "2,4"
+  startTime String // "09:00"
+  endTime   String // "17:00"
+  capacity  Int
+  circleId  String? // null = all friends
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  host   User        @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  circle Circle?     @relation(fields: [circleId], references: [id], onDelete: SetNull)
+  days   CoworkDay[]
+
+  @@index([hostId])
+}
+
+model CoworkDay {
+  id           String   @id @default(cuid())
+  hostId       String
+  placeId      String
+  date         String // "2026-07-21" (Argentina local)
+  startTime    String // "09:00"
+  endTime      String // "17:00"
+  capacity     Int
+  status       String   @default("open") // open | cancelled
+  ruleId       String?
+  reminderSent Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  host        User              @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  place       Place             @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  rule        AvailabilityRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  audience    DayAudience[]
+  attendances Attendance[]
+
+  @@unique([ruleId, date])
+  @@index([date])
+}
+
+// Audience snapshot, expanded at day-creation time. Host is implicit, not listed.
+model DayAudience {
+  id     String    @id @default(cuid())
+  dayId  String
+  userId String
+  day    CoworkDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([dayId, userId])
+  @@index([userId])
+}
+
+model Attendance {
+  id       String    @id @default(cuid())
+  dayId    String
+  userId   String
+  joinedAt DateTime  @default(now())
+  day      CoworkDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([dayId, userId])
+}
+
+// --- NextAuth ---
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

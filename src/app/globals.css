@@ -1,26 +1,69 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  --color-paper: #faf4e8;
+  --color-card: #fffcf5;
+  --color-ink: #2b2517;
+  --color-faded: #8a8069;
+  --color-line: #e7dcc2;
+  --color-clay: #bc4b27;
+  --color-clay-deep: #963517;
+  --color-olive: #66763a;
+  --color-butter: #f1e3be;
+  --font-display: var(--font-fraunces);
+  --font-body: var(--font-karla);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body), sans-serif;
+  min-height: 100dvh;
+}
+
+::selection {
+  background: var(--color-butter);
+}
+
+/* faint paper grain over everything */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-card p-5 shadow-[0_2px_10px_rgba(120,94,48,0.08)];
+  }
+  .btn-primary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition-transform duration-100 active:scale-[0.97] disabled:cursor-default disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply bg-clay text-paper hover:bg-clay-deep;
+  }
+  .btn-ghost {
+    @apply border border-line bg-transparent text-ink hover:bg-butter/50;
+  }
+  .btn-danger {
+    @apply border border-clay/40 bg-transparent text-clay hover:bg-clay/10;
+  }
+  .input {
+    @apply w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm outline-none placeholder:text-faded/70 focus:border-clay;
+  }
+  .label {
+    @apply mb-1 block text-[11px] font-bold tracking-[0.12em] uppercase text-faded;
+  }
+  .section-title {
+    @apply font-display text-2xl font-semibold tracking-tight;
+  }
+  .day-pill {
+    @apply cursor-pointer rounded-full border border-line px-3 py-1.5 text-sm font-bold text-faded transition-colors peer-checked:border-clay peer-checked:bg-clay peer-checked:text-paper;
+  }
 }
