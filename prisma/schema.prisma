@@ -6,17 +6,20 @@ datasource db {
   provider  = "postgresql"
   // Pooled connection (Neon's -pooler host) for the serverless runtime.
   url       = env("DATABASE_URL")
-  // Direct connection for migrations (prisma migrate deploy). On Neon this is the
-  // non-pooled URL; set it equal to DATABASE_URL when there's no separate pooler.
-  directUrl = env("DIRECT_URL")
+  // Direct connection for migrations (prisma migrate deploy). The Neon/Vercel
+  // integration injects this as DATABASE_URL_UNPOOLED.
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model User {
   id            String    @id @default(cuid())
   name          String?
+  username      String?   @unique
   email         String    @unique
   emailVerified DateTime?
   image         String?
+  bio           String    @default("")
+  onboardedAt   DateTime?
   inviteToken   String    @unique @default(cuid())
   createdAt     DateTime  @default(now())
 

@@ -9,7 +9,7 @@ export default async function ProfilePage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { name: true, email: true, image: true },
+    select: { name: true, username: true, email: true, image: true, bio: true },
   });
   if (!user) redirect("/signin"); // stale session: the signed-in id no longer exists
 

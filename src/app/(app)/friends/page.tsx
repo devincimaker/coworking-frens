@@ -117,7 +117,10 @@ export default async function FriendsPage() {
                   <Avatar name={f.name} image={f.image} size={38} />
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-medium text-ink">{f.name}</p>
-                    <p className="truncate font-mono text-[11px] text-faded">{f.email}</p>
+                    <p className="truncate font-mono text-[11px] text-faded">
+                      @{f.username ?? f.email.split("@")[0]}
+                    </p>
+                    {f.bio && <p className="truncate text-xs text-faded">{f.bio}</p>}
                   </div>
                 </div>
               ))}

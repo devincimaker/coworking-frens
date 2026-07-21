@@ -3,23 +3,38 @@
 The app is Next.js (App Router) + Prisma + Postgres. Local dev ran on SQLite during
 prototyping; production uses Postgres. This guide takes you from zero to a live URL.
 
-You'll do the three interactive steps (they need a browser login); everything in the
+You'll do the interactive steps (they need a browser login); everything in the
 repo is already wired for them.
 
 ---
 
-## 1. Create the database (Neon)
+## 1. Push/import the app
 
-1. Go to <https://neon.tech>, sign in, create a project (pick a region near you, e.g.
-   `aws-sa-east-1` for Argentina).
-2. In the project dashboard, open **Connection Details**. You need two strings:
-   - **Pooled** connection — the host contains `-pooler`. This is `DATABASE_URL`.
-   - **Direct** connection — same but without `-pooler`. This is `DIRECT_URL`.
-   Both should end with `?sslmode=require`.
+1. Push this repo to GitHub (see "Push to GitHub" below).
+2. <https://vercel.com/new> -> import the repo. Framework auto-detects as Next.js.
 
-Keep these two strings for step 3.
+## 2. Add Neon through Vercel
 
-## 2. Set up Resend (login emails)
+Use the official Neon integration instead of manually pasting connection strings:
+
+1. Vercel -> Marketplace -> Neon -> Install.
+2. Choose one mode:
+   - **Create New Neon Account** if you want Vercel-managed billing.
+   - **Link Existing Neon Account** if you already created a Neon project.
+3. Connect the Neon database to this Vercel project for **Production**.
+4. Leave Preview Branching off for the first deploy unless you specifically want per-PR
+   database branches now.
+
+The integration injects the database variables this app expects:
+
+| Variable                 | Purpose                                      |
+| ------------------------ | -------------------------------------------- |
+| `DATABASE_URL`           | Neon pooled connection for runtime           |
+| `DATABASE_URL_UNPOOLED`  | Neon direct connection for Prisma migrations |
+
+Do not add `DIRECT_URL`; Prisma is configured to use `DATABASE_URL_UNPOOLED`.
+
+## 3. Set up Resend (login emails)
 
 Sign-in is passwordless: users enter their email and get a one-time **magic link** to
 click. Those links are sent with Resend, so Resend is **required in production** — it's
@@ -32,48 +47,48 @@ login" is disabled in production.)
    The `onboarding@resend.dev` sandbox sender only delivers to your own verified address —
    fine for a first test, not for inviting friends.
 
-## 3. Deploy to Vercel
+## 4. Add Vercel Blob (image uploads)
 
-### Option A — Git-based (recommended)
+Profile photos upload directly from the browser to Vercel Blob, then the app stores
+the returned public URL in Postgres. This same storage path is ready for hosted-place
+photos later.
 
-1. Push this repo to GitHub (see "Push to GitHub" below).
-2. <https://vercel.com/new> → import the repo. Framework auto-detects as Next.js.
-3. Before the first deploy, add the **Environment Variables** below.
-4. Deploy. The build runs `prisma generate && prisma migrate deploy && next build`, so
-   the schema is created on Neon automatically on the first deploy.
+1. Vercel -> Project -> Storage -> Create Database -> Blob.
+2. Name it `Images`, choose Public access, and connect it to Production.
+3. Make sure Vercel adds `BLOB_READ_WRITE_TOKEN` to the project environment.
+4. For local development, run `vercel env pull` after the Blob store is connected.
 
-### Option B — CLI
+## 5. Add the remaining environment variables
 
-```bash
-vercel login            # interactive, do this yourself
-vercel link             # create/link the project
-# add env vars (repeat --prod for production):
-vercel env add DATABASE_URL production
-# ... etc for each var below ...
-vercel --prod           # deploy
-```
+Set these in Vercel -> Project -> Settings -> Environment Variables:
 
-### Environment variables (set all in Vercel → Settings → Environment Variables)
+| Variable            | Value                                                            |
+| ------------------- | ---------------------------------------------------------------- |
+| `AUTH_SECRET`       | run `openssl rand -base64 32`                                    |
+| `AUTH_TRUST_HOST`   | `true`                                                           |
+| `APP_URL`           | your final URL, e.g. `https://coworking-frens.vercel.app`        |
+| `CRON_SECRET`       | run `openssl rand -hex 16` (Vercel Cron sends it automatically)  |
+| `RESEND_API_KEY`    | from <https://resend.com> - required for magic-link login/emails |
+| `EMAIL_FROM`        | an address on a domain you verified in Resend                    |
+| `BLOB_READ_WRITE_TOKEN` | added by the connected Vercel Blob store; required for uploads |
 
-| Variable             | Value                                                            |
-| -------------------- | --------------------------------------------------------------- |
-| `DATABASE_URL`       | Neon **pooled** string (from step 1)                            |
-| `DIRECT_URL`         | Neon **direct** string (from step 1)                            |
-| `AUTH_SECRET`        | run `openssl rand -base64 32`                                   |
-| `AUTH_TRUST_HOST`    | `true`                                                          |
-| `APP_URL`            | your final URL, e.g. `https://coworking-frens.vercel.app`       |
-| `CRON_SECRET`        | run `openssl rand -hex 16` (Vercel Cron sends it automatically) |
-| `RESEND_API_KEY`     | from <https://resend.com> — **required** (magic-link login + emails) |
-| `EMAIL_FROM`         | an address on a domain you verified in Resend                   |
+Verify that the Neon integration also added `DATABASE_URL` and
+`DATABASE_URL_UNPOOLED` for Production.
 
-## 4. The daily job (reminders + auto-open)
+## 6. Deploy
+
+Trigger a Vercel deploy from the dashboard or push to the connected Git branch. The build
+runs `prisma generate && prisma migrate deploy && next build`, so the schema is created
+on Neon automatically on the first deploy.
+
+## 7. The daily job (reminders + auto-open)
 
 `vercel.json` already declares a cron hitting `/api/cron` at **23:00 UTC (20:00 in
 Argentina)** every day. It materializes recurring days 3 weeks out and sends the
 day-before reminder emails. Vercel authenticates it automatically using `CRON_SECRET`
 — no extra setup. (Cron is enabled on Hobby and Pro plans.)
 
-## 5. First run
+## 8. First run
 
 1. Visit your URL, enter your email, and click the magic link it sends you.
 2. Open **Friends**, copy your invite link, send it to a friend — accepting it makes
@@ -98,10 +113,10 @@ git push -u origin main
 
 - **`prepared statement "s0" already exists`** (or similar) at runtime: Neon's pooler is
   in transaction mode. Append `&pgbouncer=true` to `DATABASE_URL` (the pooled one only,
-  not `DIRECT_URL`).
+  not `DATABASE_URL_UNPOOLED`).
 - **Build fails on `prisma migrate deploy`**: make sure both `DATABASE_URL` and
-  `DIRECT_URL` are set for the environment being built (Production, and Preview if you use
-  PR previews).
+  `DATABASE_URL_UNPOOLED` are set for the environment being built (Production, and Preview
+  if you use PR previews).
 
 ## Custom domain
 

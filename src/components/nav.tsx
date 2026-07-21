@@ -34,7 +34,7 @@ const FriendsIcon = ({ className }: { className?: string }) => (
 );
 
 const ITEMS: NavItem[] = [
-  { href: "/", label: "Juntadas", short: "Juntadas", icon: HomeIcon },
+  { href: "/juntadas", label: "Juntadas", short: "Juntadas", icon: HomeIcon },
   { href: "/host", label: "Ser anfitrión", short: "Anfitrión", icon: HostIcon },
   { href: "/friends", label: "Amigos", short: "Amigos", icon: FriendsIcon },
 ];
@@ -42,7 +42,7 @@ const ITEMS: NavItem[] = [
 function useActive() {
   const pathname = usePathname();
   return (href: string) => {
-    if (href === "/") return pathname === "/" || pathname.startsWith("/day");
+    if (href === "/juntadas") return pathname === "/juntadas" || pathname.startsWith("/day");
     return pathname.startsWith(href);
   };
 }
@@ -51,13 +51,13 @@ export function Sidebar({
   user,
   signOutAction,
 }: {
-  user: { name?: string | null; image?: string | null };
+  user: { name?: string | null; username?: string | null; image?: string | null };
   signOutAction: () => Promise<void>;
 }) {
   const isActive = useActive();
   return (
     <aside className="sticky top-0 hidden h-dvh w-[250px] shrink-0 flex-col gap-1 border-r border-line px-4 py-8 md:flex">
-      <Link href="/" className="mb-6 flex items-center gap-2.5 px-2.5">
+      <Link href="/juntadas" className="mb-6 flex items-center gap-2.5 px-2.5">
         <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-clay font-display text-base font-bold text-white">
           F
         </span>
@@ -89,7 +89,9 @@ export function Sidebar({
           <Avatar name={user.name ?? null} image={user.image ?? null} size={34} />
           <div className="min-w-0 leading-tight">
             <div className="truncate text-sm font-semibold text-ink">{user.name ?? "Vos"}</div>
-            <div className="font-mono text-[11px] text-faded">Buenos Aires</div>
+            <div className="truncate font-mono text-[11px] text-faded">
+              @{user.username ?? "perfil"}
+            </div>
           </div>
         </Link>
         <form action={signOutAction}>
@@ -138,7 +140,7 @@ export function MobileTopBar({
 }) {
   return (
     <div className="flex items-center justify-between px-5 pt-6 pb-1 md:hidden">
-      <Link href="/" className="flex items-center gap-2">
+      <Link href="/juntadas" className="flex items-center gap-2">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-clay font-display text-sm font-bold text-white">
           F
         </span>

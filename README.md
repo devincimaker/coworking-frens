@@ -18,7 +18,7 @@ All times are Argentina-local (MVP assumption — no per-user timezones).
 
 ## Stack
 
-Next.js App Router · Prisma · Postgres · NextAuth v5 (email magic link) · Resend · Tailwind v4.
+Next.js App Router · Prisma · Postgres · NextAuth v5 (email magic link) · Resend · Vercel Blob · Tailwind v4.
 
 ## Local development
 
@@ -26,13 +26,15 @@ The app targets Postgres. For local work, point it at a Neon dev branch, or run 
 Postgres:
 
 ```bash
-cp .env.example .env          # fill DATABASE_URL / DIRECT_URL / AUTH_SECRET
+cp .env.example .env          # fill DATABASE_URL / DATABASE_URL_UNPOOLED / AUTH_SECRET
 npx prisma migrate deploy     # create tables
 npm run dev                   # http://localhost:3000
 ```
 
 Sign-in is a passwordless **email magic link** (via Resend). With no `RESEND_API_KEY`
 in local development, the magic link is logged to the server console instead of sent.
+Profile photos upload directly to **Vercel Blob**; set `BLOB_READ_WRITE_TOKEN` locally
+with `vercel env pull` after creating a Blob store in the Vercel project.
 `GET /api/dev/seed` creates a sample friend group (Ana, Marco, Lea)
 with two hosted places to click around.
 

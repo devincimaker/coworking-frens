@@ -10,11 +10,33 @@ export async function GET() {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
-  const mk = (email: string, name: string) =>
-    prisma.user.upsert({ where: { email }, update: {}, create: { email, name } });
-  const ana = await mk("ana@test.dev", "Ana Suarez");
-  const marco = await mk("marco@test.dev", "Marco Gilardi");
-  const lea = await mk("lea@test.dev", "Lea Kaplan");
+  const mk = (email: string, name: string, username: string, image: string, bio: string) =>
+    prisma.user.upsert({
+      where: { email },
+      update: { name, username, image, bio, onboardedAt: new Date() },
+      create: { email, name, username, image, bio, onboardedAt: new Date() },
+    });
+  const ana = await mk(
+    "ana@test.dev",
+    "Ana Suarez",
+    "ana",
+    "https://i.pravatar.cc/160?u=ana",
+    "Productora de foco, café y sobremesa larga."
+  );
+  const marco = await mk(
+    "marco@test.dev",
+    "Marco Gilardi",
+    "marco",
+    "https://i.pravatar.cc/160?u=marco",
+    "Diseño, calls cortas y una terraza cuando sale el sol."
+  );
+  const lea = await mk(
+    "lea@test.dev",
+    "Lea Kaplan",
+    "lea",
+    "https://i.pravatar.cc/160?u=lea",
+    "Escribo mejor con silencio, mate y playlists tranquilas."
+  );
 
   await makeFriends(ana.id, marco.id);
   await makeFriends(ana.id, lea.id);

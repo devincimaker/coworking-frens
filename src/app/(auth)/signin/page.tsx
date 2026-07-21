@@ -6,7 +6,7 @@ export default async function SignInPage({
   searchParams: Promise<{ callbackUrl?: string; error?: string }>;
 }) {
   const { callbackUrl, error } = await searchParams;
-  const redirectTo = callbackUrl ?? "/";
+  const redirectTo = callbackUrl ?? "/juntadas";
 
   return (
     <div className="mt-16 text-center">

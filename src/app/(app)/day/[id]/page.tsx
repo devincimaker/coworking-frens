@@ -34,7 +34,7 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-[rgba(28,20,14,0.55)] to-transparent to-55%" />
         <Link
-          href="/"
+          href="/juntadas"
           aria-label="Volver"
           className="absolute top-4 left-4 flex h-9 w-9 items-center justify-center rounded-full bg-paper/90 text-ink shadow-md"
         >

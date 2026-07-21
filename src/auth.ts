@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { isOnboardingComplete } from "@/lib/profile";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -46,5 +47,12 @@ export async function requireUser() {
   if (!id) redirect("/signin");
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) redirect("/signin"); // stale session: the signed-in id no longer exists
+  return user;
+}
+
+/** Like requireUser(), but redirects first-run users into onboarding. */
+export async function requireOnboardedUser() {
+  const user = await requireUser();
+  if (!isOnboardingComplete(user)) redirect("/onboarding");
   return user;
 }

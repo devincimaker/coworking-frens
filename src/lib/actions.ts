@@ -2,20 +2,34 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/auth";
+import { requireOnboardedUser, requireUser } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { areFriends, friendsOf, makeFriends } from "@/lib/friends";
 import { createDay, materializeRules } from "@/lib/days";
+import {
+  normalizeBio,
+  normalizeImageUrl,
+  normalizeName,
+  normalizeUsername,
+  validateUsername,
+} from "@/lib/profile";
 import { formatDay, todayBA } from "@/lib/tz";
 import { appUrl } from "@/lib/url";
 
 const first = (name: string | null) => name?.split(" ")[0] ?? "Alguien";
 
+function safeRedirectPath(raw: FormDataEntryValue | null) {
+  const value = String(raw ?? "").trim();
+  return value.startsWith("/") && !value.startsWith("//") ? value : "/juntadas";
+}
+
 function revalidateAll() {
   revalidatePath("/");
+  revalidatePath("/juntadas");
   revalidatePath("/host");
   revalidatePath("/friends");
+  revalidatePath("/profile");
 }
 
 type ProfileFormState = {
@@ -23,52 +37,80 @@ type ProfileFormState = {
   message: string;
 };
 
-type ImageUrlResult =
-  | { ok: true; image: string | null }
-  | { ok: false; message: string };
-
-function normalizeName(raw: FormDataEntryValue | null) {
-  return String(raw ?? "")
-    .trim()
-    .replace(/\s+/g, " ");
-}
-
-function normalizeImageUrl(raw: FormDataEntryValue | null): ImageUrlResult {
-  const value = String(raw ?? "").trim();
-  if (!value) return { ok: true, image: null };
-  if (value.length > 500) {
-    return { ok: false, message: "Usá una URL de imagen de menos de 500 caracteres." };
-  }
-
-  try {
-    const url = new URL(value);
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
-      return { ok: false, message: "Usá una URL de imagen http o https." };
-    }
-    return { ok: true, image: url.toString() };
-  } catch {
-    return { ok: false, message: "Usá una URL de imagen válida." };
-  }
-}
-
 // --- Profile ---
+
+async function validateProfileFields(
+  formData: FormData,
+  userId: string,
+  options: { requireImage: boolean }
+) {
+  const name = normalizeName(formData.get("name"));
+  const username = normalizeUsername(formData.get("username"));
+  const bio = normalizeBio(formData.get("bio"));
+  const imageResult = normalizeImageUrl(formData.get("image"));
+
+  if (!name) return { ok: false as const, message: "Poné un nombre." };
+  if (name.length > 80) {
+    return { ok: false as const, message: "El nombre tiene que tener menos de 80 caracteres." };
+  }
+
+  const usernameMessage = validateUsername(username);
+  if (usernameMessage) return { ok: false as const, message: usernameMessage };
+
+  if (!bio) return { ok: false as const, message: "Sumá una bio corta." };
+  if (bio.length > 160) {
+    return { ok: false as const, message: "La bio tiene que tener menos de 160 caracteres." };
+  }
+
+  if (!imageResult.ok) return { ok: false as const, message: imageResult.message };
+  if (options.requireImage && !imageResult.image) {
+    return { ok: false as const, message: "Pegá una URL para tu foto." };
+  }
+
+  const existing = await prisma.user.findUnique({
+    where: { username },
+    select: { id: true },
+  });
+  if (existing && existing.id !== userId) {
+    return { ok: false as const, message: "Ese username ya está usado." };
+  }
+
+  return {
+    ok: true as const,
+    data: { name, username, bio, image: imageResult.image },
+  };
+}
+
+export async function completeOnboarding(
+  _prevState: ProfileFormState,
+  formData: FormData
+): Promise<ProfileFormState> {
+  const user = await requireUser();
+  const result = await validateProfileFields(formData, user.id, { requireImage: true });
+
+  if (!result.ok) return { status: "error", message: result.message };
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { ...result.data, onboardedAt: new Date() },
+  });
+
+  revalidateAll();
+  redirect(safeRedirectPath(formData.get("callbackUrl")));
+}
 
 export async function updateProfile(
   _prevState: ProfileFormState,
   formData: FormData
 ): Promise<ProfileFormState> {
-  const user = await requireUser();
-  const name = normalizeName(formData.get("name"));
-  const result = normalizeImageUrl(formData.get("image"));
+  const user = await requireOnboardedUser();
+  const result = await validateProfileFields(formData, user.id, { requireImage: false });
 
-  if (!name) return { status: "error", message: "Poné un nombre." };
-  if (name.length > 80)
-    return { status: "error", message: "El nombre tiene que tener menos de 80 caracteres." };
   if (!result.ok) return { status: "error", message: result.message };
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { name, image: result.image },
+    data: result.data,
   });
 
   revalidateAll();
@@ -80,7 +122,7 @@ export async function updateProfile(
 // --- Place ---
 
 export async function savePlace(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const data = {
     nickname: String(formData.get("nickname") ?? "").trim() || "My place",
     address: String(formData.get("address") ?? "").trim(),
@@ -116,7 +158,7 @@ async function assertOwnCircleOrNull(userId: string, raw: FormDataEntryValue | n
 }
 
 export async function createOneOffDay(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const date = String(formData.get("date") ?? "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < todayBA()) throw new Error("Invalid date");
   const { startTime, endTime } = parseTimes(formData);
@@ -134,7 +176,7 @@ export async function createOneOffDay(formData: FormData) {
 }
 
 export async function cancelDay(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const dayId = String(formData.get("dayId"));
   const day = await prisma.coworkDay.findFirst({
     where: { id: dayId, hostId: user.id, status: "open" },
@@ -145,13 +187,13 @@ export async function cancelDay(formData: FormData) {
   await sendEmail(
     day.attendances.map((a) => a.user.email),
     `Cancelada: ${day.place.nickname} el ${formatDay(day.date)}`,
-    `${user.name} canceló la juntada en ${day.place.nickname} el ${formatDay(day.date)}. ¡Perdón!\n\n${appUrl()}`
+    `${user.name} canceló la juntada en ${day.place.nickname} el ${formatDay(day.date)}. ¡Perdón!\n\n${appUrl()}/juntadas`
   );
   revalidateAll();
 }
 
 export async function joinDay(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const dayId = String(formData.get("dayId"));
   const day = await prisma.$transaction(async (tx) => {
     const day = await tx.coworkDay.findFirst({
@@ -179,7 +221,7 @@ export async function joinDay(formData: FormData) {
 }
 
 export async function leaveDay(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const dayId = String(formData.get("dayId"));
   const attendance = await prisma.attendance.findUnique({
     where: { dayId_userId: { dayId, userId: user.id } },
@@ -199,7 +241,7 @@ export async function leaveDay(formData: FormData) {
 }
 
 export async function removeAttendee(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const dayId = String(formData.get("dayId"));
   const userId = String(formData.get("userId"));
   const day = await prisma.coworkDay.findFirst({
@@ -213,7 +255,7 @@ export async function removeAttendee(formData: FormData) {
     await sendEmail(
       [removed.email],
       `Cambio de planes para ${formatDay(day.date)}`,
-      `${user.name} tuvo que liberar tu lugar en ${day.place.nickname} el ${formatDay(day.date)}. Perdón — mirá las otras juntadas: ${appUrl()}`
+      `${user.name} tuvo que liberar tu lugar en ${day.place.nickname} el ${formatDay(day.date)}. Perdón — mirá las otras juntadas: ${appUrl()}/juntadas`
     );
   }
   revalidateAll();
@@ -222,7 +264,7 @@ export async function removeAttendee(formData: FormData) {
 // --- Rules ---
 
 export async function createRule(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const weekdays = formData
     .getAll("weekdays")
     .map(Number)
@@ -249,7 +291,7 @@ export async function createRule(formData: FormData) {
   await sendEmail(
     audience.map((u) => u.email),
     `${first(user.name)} abre su lugar los ${days}`,
-    `${user.name} abrió ${place.nickname} para laburar todos los ${days}, ${startTime}–${endTime} (${capacity} lugares).\n\nMirá las próximas juntadas: ${appUrl()}`
+    `${user.name} abrió ${place.nickname} para laburar todos los ${days}, ${startTime}–${endTime} (${capacity} lugares).\n\nMirá las próximas juntadas: ${appUrl()}/juntadas`
   );
   revalidateAll();
 }
@@ -265,13 +307,13 @@ async function cancelFutureInstances(ruleId: string, hostName: string | null) {
     await sendEmail(
       day.attendances.map((a) => a.user.email),
       `Cancelada: ${day.place.nickname} el ${formatDay(day.date)}`,
-      `${hostName} canceló la juntada en ${day.place.nickname} el ${formatDay(day.date)}.\n\n${appUrl()}`
+      `${hostName} canceló la juntada en ${day.place.nickname} el ${formatDay(day.date)}.\n\n${appUrl()}/juntadas`
     );
   }
 }
 
 export async function toggleRule(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const ruleId = String(formData.get("ruleId"));
   const rule = await prisma.availabilityRule.findFirst({ where: { id: ruleId, hostId: user.id } });
   if (!rule) throw new Error("Rule not found");
@@ -285,7 +327,7 @@ export async function toggleRule(formData: FormData) {
 }
 
 export async function deleteRule(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const ruleId = String(formData.get("ruleId"));
   const rule = await prisma.availabilityRule.findFirst({ where: { id: ruleId, hostId: user.id } });
   if (!rule) throw new Error("Rule not found");
@@ -297,7 +339,7 @@ export async function deleteRule(formData: FormData) {
 // --- Circles ---
 
 export async function createCircle(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Name required");
   await prisma.circle.upsert({
@@ -309,7 +351,7 @@ export async function createCircle(formData: FormData) {
 }
 
 export async function deleteCircle(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const circleId = String(formData.get("circleId"));
   const circle = await prisma.circle.findFirst({ where: { id: circleId, ownerId: user.id } });
   if (!circle) throw new Error("Circle not found");
@@ -326,7 +368,7 @@ export async function deleteCircle(formData: FormData) {
 }
 
 export async function toggleCircleMember(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const circleId = String(formData.get("circleId"));
   const friendId = String(formData.get("friendId"));
   const circle = await prisma.circle.findFirst({ where: { id: circleId, ownerId: user.id } });
@@ -346,11 +388,11 @@ export async function toggleCircleMember(formData: FormData) {
 // --- Invites ---
 
 export async function acceptInvite(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireOnboardedUser();
   const token = String(formData.get("token"));
   const inviter = await prisma.user.findUnique({ where: { inviteToken: token } });
   if (!inviter || inviter.id === user.id) throw new Error("Invalid invite");
   await makeFriends(user.id, inviter.id);
   revalidateAll();
-  redirect("/");
+  redirect("/juntadas");
 }
