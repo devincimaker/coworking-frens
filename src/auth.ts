@@ -1,41 +1,31 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
-import Credentials from "next-auth/providers/credentials";
+import Resend from "next-auth/providers/resend";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-
-const devLoginEnabled =
-  process.env.NODE_ENV === "development" || process.env.ALLOW_DEV_LOGIN === "1";
+import { sendEmail } from "@/lib/email";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  pages: { signIn: "/signin" },
+  // JWT sessions so a magic link only has to be clicked once — the session cookie
+  // then keeps people signed in for maxAge (90 days), refreshed on each visit.
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 90 },
+  pages: { signIn: "/signin", verifyRequest: "/signin/revisa-tu-correo" },
   providers: [
-    Google,
-    ...(devLoginEnabled
-      ? [
-          Credentials({
-            id: "dev-login",
-            name: "Dev login",
-            credentials: {
-              email: { label: "Email" },
-              name: { label: "Name" },
-            },
-            async authorize(credentials) {
-              const email = String(credentials?.email ?? "").trim().toLowerCase();
-              const name = String(credentials?.name ?? "").trim();
-              if (!email.includes("@")) return null;
-              const user = await prisma.user.upsert({
-                where: { email },
-                update: name ? { name } : {},
-                create: { email, name: name || email.split("@")[0] },
-              });
-              return { id: user.id, email: user.email, name: user.name, image: user.image };
-            },
-          }),
-        ]
-      : []),
+    Resend({
+      apiKey: process.env.RESEND_API_KEY,
+      from: process.env.EMAIL_FROM ?? "Coworking Frens <onboarding@resend.dev>",
+      // Reuse the app's Resend helper: Spanish-branded, and with no RESEND_API_KEY
+      // (local dev) it logs the link to the server console instead of sending.
+      async sendVerificationRequest({ identifier, url }) {
+        await sendEmail(
+          [identifier],
+          "Tu link para entrar a Coworking Frens",
+          `Tocá este link para entrar (vence en 24 h):\n\n${url}\n\nSi no pediste esto, ignorá este mail.`,
+          { throwOnError: true }
+        );
+      },
+    }),
   ],
   callbacks: {
     jwt({ token, user }) {
@@ -49,12 +39,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 });
 
-/** Like auth(), but throws if there is no signed-in user. */
+/** Like auth(), but redirects to sign-in if there is no signed-in (and still-existing) user. */
 export async function requireUser() {
   const session = await auth();
   const id = session?.user?.id;
-  if (!id) throw new Error("Not signed in");
+  if (!id) redirect("/signin");
   const user = await prisma.user.findUnique({ where: { id } });
-  if (!user) throw new Error("User not found");
+  if (!user) redirect("/signin"); // stale session: the signed-in id no longer exists
   return user;
 }

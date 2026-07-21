@@ -22,7 +22,7 @@ export function ProfileForm({
   const statusClass = state.status === "error" ? "text-clay" : "text-olive";
 
   return (
-    <form action={formAction} className="card space-y-5">
+    <form action={formAction} className="card space-y-5 p-5">
       <div className="flex items-center gap-4">
         <Avatar name={previewName} image={previewImage} size={72} />
         <div className="min-w-0">
@@ -36,7 +36,7 @@ export function ProfileForm({
       <div className="space-y-3">
         <div>
           <label htmlFor="profile-name" className="label">
-            Display name
+            Nombre
           </label>
           <input
             id="profile-name"
@@ -51,7 +51,7 @@ export function ProfileForm({
 
         <div>
           <label htmlFor="profile-image" className="label">
-            Profile image URL
+            URL de tu foto
           </label>
           <div className="flex gap-2">
             <input
@@ -69,7 +69,7 @@ export function ProfileForm({
               onClick={() => setImage("")}
               disabled={!image || pending}
             >
-              Clear
+              Borrar
             </button>
           </div>
         </div>
@@ -80,7 +80,7 @@ export function ProfileForm({
           {state.message}
         </p>
         <button type="submit" className="btn-primary" disabled={pending}>
-          {pending ? "Saving..." : "Save profile"}
+          {pending ? "Guardando..." : "Guardar perfil"}
         </button>
       </div>
     </form>

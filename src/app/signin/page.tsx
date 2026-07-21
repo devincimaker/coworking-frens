@@ -1,65 +1,58 @@
 import { signIn } from "@/auth";
 
-const devLoginEnabled =
-  process.env.NODE_ENV === "development" || process.env.ALLOW_DEV_LOGIN === "1";
-
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; error?: string }>;
 }) {
-  const { callbackUrl } = await searchParams;
+  const { callbackUrl, error } = await searchParams;
   const redirectTo = callbackUrl ?? "/";
-  const googleConfigured = Boolean(process.env.AUTH_GOOGLE_ID);
 
   return (
-    <div className="mx-auto mt-16 max-w-sm text-center">
-      <h1 className="font-display text-5xl font-semibold italic tracking-tight">
-        coworking <span className="text-clay">frens</span>
-      </h1>
-      <p className="mt-3 text-faded">
-        Your friends&apos; houses are the office. See who&apos;s hosting, claim a desk, show up.
+    <div className="mt-16 text-center">
+      <div className="mb-4 flex items-center justify-center gap-2.5">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-clay font-display text-xl font-bold text-white">
+          F
+        </span>
+        <span className="font-display text-3xl font-bold tracking-tight text-ink">Frens</span>
+      </div>
+      <p className="text-faded">
+        La oficina es la casa de tus amigos. Mirá quién hostea, sumate y aparecé.
       </p>
 
-      <div className="card mt-8 space-y-4 text-left">
+      <div className="card mt-8 space-y-4 p-5 text-left">
+        {error && (
+          <p className="rounded-xl bg-clay/10 px-3 py-2 text-center text-sm font-semibold text-clay">
+            No pudimos enviarte el link. Revisá el mail y probá de nuevo.
+          </p>
+        )}
+
         <form
-          action={async () => {
+          className="space-y-2"
+          action={async (formData: FormData) => {
             "use server";
-            await signIn("google", { redirectTo });
+            await signIn("resend", {
+              email: String(formData.get("email") ?? "").trim(),
+              redirectTo,
+            });
           }}
         >
-          <button className="btn-primary w-full py-3" disabled={!googleConfigured}>
-            Continue with Google
-          </button>
-          {!googleConfigured && (
-            <p className="mt-2 text-center text-xs text-faded">
-              (Google sign-in needs AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET in .env)
-            </p>
-          )}
+          <label htmlFor="signin-email" className="label">
+            Tu email
+          </label>
+          <input
+            id="signin-email"
+            name="email"
+            type="email"
+            required
+            placeholder="vos@email.com"
+            className="input"
+          />
+          <button className="btn-primary w-full py-3">Mandame un link para entrar</button>
+          <p className="pt-1 text-center text-xs text-faded">
+            Te llega un link al mail. Tocalo y ya estás adentro — sin contraseñas.
+          </p>
         </form>
-
-        {devLoginEnabled && (
-          <>
-            <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-faded">
-              <span className="h-px flex-1 bg-line" /> dev login <span className="h-px flex-1 bg-line" />
-            </div>
-            <form
-              className="space-y-2"
-              action={async (formData: FormData) => {
-                "use server";
-                await signIn("dev-login", {
-                  email: String(formData.get("email") ?? ""),
-                  name: String(formData.get("name") ?? ""),
-                  redirectTo,
-                });
-              }}
-            >
-              <input name="name" placeholder="Name" className="input" />
-              <input name="email" type="email" required placeholder="Email" className="input" />
-              <button className="btn-ghost w-full">Sign in as this person</button>
-            </form>
-          </>
-        )}
       </div>
     </div>
   );

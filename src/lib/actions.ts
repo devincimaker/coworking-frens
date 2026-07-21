@@ -10,7 +10,7 @@ import { createDay, materializeRules } from "@/lib/days";
 import { formatDay, todayBA } from "@/lib/tz";
 import { appUrl } from "@/lib/url";
 
-const first = (name: string | null) => name?.split(" ")[0] ?? "A friend";
+const first = (name: string | null) => name?.split(" ")[0] ?? "Alguien";
 
 function revalidateAll() {
   revalidatePath("/");
@@ -37,17 +37,17 @@ function normalizeImageUrl(raw: FormDataEntryValue | null): ImageUrlResult {
   const value = String(raw ?? "").trim();
   if (!value) return { ok: true, image: null };
   if (value.length > 500) {
-    return { ok: false, message: "Use an image URL under 500 characters." };
+    return { ok: false, message: "Usá una URL de imagen de menos de 500 caracteres." };
   }
 
   try {
     const url = new URL(value);
     if (url.protocol !== "http:" && url.protocol !== "https:") {
-      return { ok: false, message: "Use an http or https image URL." };
+      return { ok: false, message: "Usá una URL de imagen http o https." };
     }
     return { ok: true, image: url.toString() };
   } catch {
-    return { ok: false, message: "Use a valid image URL." };
+    return { ok: false, message: "Usá una URL de imagen válida." };
   }
 }
 
@@ -61,8 +61,9 @@ export async function updateProfile(
   const name = normalizeName(formData.get("name"));
   const result = normalizeImageUrl(formData.get("image"));
 
-  if (!name) return { status: "error", message: "Add a display name." };
-  if (name.length > 80) return { status: "error", message: "Keep the name under 80 characters." };
+  if (!name) return { status: "error", message: "Poné un nombre." };
+  if (name.length > 80)
+    return { status: "error", message: "El nombre tiene que tener menos de 80 caracteres." };
   if (!result.ok) return { status: "error", message: result.message };
 
   await prisma.user.update({
@@ -73,7 +74,7 @@ export async function updateProfile(
   revalidateAll();
   revalidatePath("/profile");
 
-  return { status: "success", message: "Profile saved." };
+  return { status: "success", message: "Perfil guardado." };
 }
 
 // --- Place ---
@@ -126,8 +127,8 @@ export async function createOneOffDay(formData: FormData) {
 
   await sendEmail(
     day.audience.map((a) => a.user.email),
-    `${first(user.name)} opened ${day.place.nickname} — ${formatDay(date)}`,
-    `${user.name} is hosting a cowork day at ${day.place.nickname} on ${formatDay(date)}, ${startTime}–${endTime}. ${capacity} spots.\n\nClaim yours: ${appUrl()}/day/${day.id}`
+    `${first(user.name)} abrió ${day.place.nickname} — ${formatDay(date)}`,
+    `${user.name} abre una juntada para laburar en ${day.place.nickname} el ${formatDay(date)}, ${startTime}–${endTime}. ${capacity} lugares.\n\nSumate: ${appUrl()}/day/${day.id}`
   );
   revalidateAll();
 }
@@ -143,8 +144,8 @@ export async function cancelDay(formData: FormData) {
   await prisma.coworkDay.update({ where: { id: day.id }, data: { status: "cancelled" } });
   await sendEmail(
     day.attendances.map((a) => a.user.email),
-    `Cancelled: ${day.place.nickname} on ${formatDay(day.date)}`,
-    `${user.name} cancelled the cowork day at ${day.place.nickname} on ${formatDay(day.date)}. Sorry!\n\n${appUrl()}`
+    `Cancelada: ${day.place.nickname} el ${formatDay(day.date)}`,
+    `${user.name} canceló la juntada en ${day.place.nickname} el ${formatDay(day.date)}. ¡Perdón!\n\n${appUrl()}`
   );
   revalidateAll();
 }
@@ -171,8 +172,8 @@ export async function joinDay(formData: FormData) {
   });
   await sendEmail(
     [day.host.email],
-    `${first(user.name)} is coming ${formatDay(day.date)}`,
-    `${user.name} claimed a spot at ${day.place.nickname} on ${formatDay(day.date)}, ${day.startTime}–${day.endTime}.\n\n${appUrl()}/day/${day.id}`
+    `${first(user.name)} se suma ${formatDay(day.date)}`,
+    `${user.name} agarró un lugar en ${day.place.nickname} el ${formatDay(day.date)}, ${day.startTime}–${day.endTime}.\n\n${appUrl()}/day/${day.id}`
   );
   revalidateAll();
 }
@@ -190,8 +191,8 @@ export async function leaveDay(formData: FormData) {
   if (day.status === "open" && day.date >= todayBA()) {
     await sendEmail(
       [day.host.email],
-      `${first(user.name)} can't make it ${formatDay(day.date)}`,
-      `${user.name} gave up their spot at ${day.place.nickname} on ${formatDay(day.date)}.\n\n${appUrl()}/day/${day.id}`
+      `${first(user.name)} no va a poder ${formatDay(day.date)}`,
+      `${user.name} soltó su lugar en ${day.place.nickname} el ${formatDay(day.date)}.\n\n${appUrl()}/day/${day.id}`
     );
   }
   revalidateAll();
@@ -211,8 +212,8 @@ export async function removeAttendee(formData: FormData) {
   if (removed) {
     await sendEmail(
       [removed.email],
-      `Change of plans for ${formatDay(day.date)}`,
-      `${user.name} had to free up your spot at ${day.place.nickname} on ${formatDay(day.date)}. Sorry about that — check the feed for other days: ${appUrl()}`
+      `Cambio de planes para ${formatDay(day.date)}`,
+      `${user.name} tuvo que liberar tu lugar en ${day.place.nickname} el ${formatDay(day.date)}. Perdón — mirá las otras juntadas: ${appUrl()}`
     );
   }
   revalidateAll();
@@ -243,12 +244,12 @@ export async function createRule(formData: FormData) {
         await prisma.circleMember.findMany({ where: { circleId }, include: { user: true } })
       ).map((m) => m.user)
     : await friendsOf(user.id);
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dayNames = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
   const days = rule.weekdays.split(",").map((d) => dayNames[Number(d)]).join(", ");
   await sendEmail(
     audience.map((u) => u.email),
-    `${first(user.name)}'s place is now open on ${days}`,
-    `${user.name} opened ${place.nickname} for coworking every ${days}, ${startTime}–${endTime} (${capacity} spots).\n\nSee upcoming days: ${appUrl()}`
+    `${first(user.name)} abre su lugar los ${days}`,
+    `${user.name} abrió ${place.nickname} para laburar todos los ${days}, ${startTime}–${endTime} (${capacity} lugares).\n\nMirá las próximas juntadas: ${appUrl()}`
   );
   revalidateAll();
 }
@@ -263,8 +264,8 @@ async function cancelFutureInstances(ruleId: string, hostName: string | null) {
     await prisma.coworkDay.update({ where: { id: day.id }, data: { status: "cancelled" } });
     await sendEmail(
       day.attendances.map((a) => a.user.email),
-      `Cancelled: ${day.place.nickname} on ${formatDay(day.date)}`,
-      `${hostName} cancelled the cowork day at ${day.place.nickname} on ${formatDay(day.date)}.\n\n${appUrl()}`
+      `Cancelada: ${day.place.nickname} el ${formatDay(day.date)}`,
+      `${hostName} canceló la juntada en ${day.place.nickname} el ${formatDay(day.date)}.\n\n${appUrl()}`
     );
   }
 }

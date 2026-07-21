@@ -23,16 +23,14 @@ export function weekdayOf(date: string): number {
   return new Date(`${date}T12:00:00Z`).getUTCDay(); // 0=Sun .. 6=Sat
 }
 
+const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
 export function formatDay(date: string): string {
   const today = todayBA();
-  if (date === today) return "Today";
-  if (date === addDays(today, 1)) return "Tomorrow";
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone: "UTC",
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  }).format(new Date(`${date}T12:00:00Z`));
+  if (date === today) return "Hoy";
+  if (date === addDays(today, 1)) return "Mañana";
+  const [, m, d] = date.split("-").map(Number);
+  return `${WEEKDAY_LABELS[weekdayOf(date)]} ${d} ${MONTHS[m - 1]}`;
 }
 
-export const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export const WEEKDAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];

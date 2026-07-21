@@ -18,7 +18,7 @@ All times are Argentina-local (MVP assumption — no per-user timezones).
 
 ## Stack
 
-Next.js App Router · Prisma · Postgres · NextAuth v5 (Google) · Resend · Tailwind v4.
+Next.js App Router · Prisma · Postgres · NextAuth v5 (email magic link) · Resend · Tailwind v4.
 
 ## Local development
 
@@ -31,15 +31,16 @@ npx prisma migrate deploy     # create tables
 npm run dev                   # http://localhost:3000
 ```
 
-In development a **passwordless dev login** is available on the sign-in page (no Google
-setup needed), and `GET /api/dev/seed` creates a sample friend group (Ana, Marco, Lea)
-with two hosted places to click around. Both are disabled when `NODE_ENV=production`.
+Sign-in is a passwordless **email magic link** (via Resend). With no `RESEND_API_KEY`
+in local development, the magic link is logged to the server console instead of sent.
+`GET /api/dev/seed` creates a sample friend group (Ana, Marco, Lea)
+with two hosted places to click around.
 
 ## Key paths
 
 | Path                     | What                                             |
 | ------------------------ | ------------------------------------------------ |
-| `src/auth.ts`            | NextAuth config (Google + dev-login)             |
+| `src/auth.ts`            | NextAuth config (email magic link)               |
 | `src/lib/actions.ts`     | All server actions (join, host, circles, invite) |
 | `src/lib/days.ts`        | Day creation + audience snapshot + materializer  |
 | `src/lib/queries.ts`     | Feed / day / host / circle reads                 |

@@ -1,4 +1,14 @@
-const PALETTE = ["#bc4b27", "#66763a", "#a5732c", "#5b6b8c", "#7d4f70", "#3f7d6d"];
+// Warm pastel avatar palette, matching the design mockup's people colors.
+const PALETTE = [
+  "oklch(0.70 0.13 40)",
+  "oklch(0.80 0.12 80)",
+  "oklch(0.72 0.12 135)",
+  "oklch(0.66 0.13 330)",
+  "oklch(0.72 0.11 200)",
+  "oklch(0.68 0.13 255)",
+  "oklch(0.68 0.13 20)",
+  "oklch(0.74 0.12 150)",
+];
 
 function hue(seed: string) {
   let h = 0;
@@ -17,7 +27,7 @@ export function Avatar({
   size?: number;
   ring?: boolean;
 }) {
-  const cls = `shrink-0 rounded-full ${ring ? "ring-2 ring-card" : ""}`;
+  const cls = `shrink-0 rounded-full ${ring ? "ring-2 ring-white" : ""}`;
   if (image) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -33,8 +43,8 @@ export function Avatar({
   const initial = (name ?? "?").trim().charAt(0).toUpperCase();
   return (
     <div
-      className={`${cls} flex items-center justify-center font-display font-semibold text-paper`}
-      style={{ width: size, height: size, backgroundColor: hue(name ?? "?"), fontSize: size * 0.45 }}
+      className={`${cls} flex items-center justify-center font-semibold text-white`}
+      style={{ width: size, height: size, backgroundColor: hue(name ?? "?"), fontSize: size * 0.42 }}
     >
       {initial}
     </div>

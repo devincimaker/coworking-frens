@@ -1,69 +1,87 @@
 @import "tailwindcss";
 
 @theme {
-  --color-paper: #faf4e8;
-  --color-card: #fffcf5;
-  --color-ink: #2b2517;
-  --color-faded: #8a8069;
-  --color-line: #e7dcc2;
-  --color-clay: #bc4b27;
-  --color-clay-deep: #963517;
-  --color-olive: #66763a;
-  --color-butter: #f1e3be;
-  --font-display: var(--font-fraunces);
-  --font-body: var(--font-karla);
+  --color-paper: #faf6ef;
+  --color-surface: #ffffff;
+  --color-cream: #fdfbf7;
+  --color-ink: #2b2620;
+  --color-faded: oklch(0.54 0.028 65);
+  --color-line: rgba(60, 40, 20, 0.09);
+  --color-clay: oklch(0.6 0.16 40);
+  --color-clay-deep: oklch(0.5 0.16 40);
+  --color-olive: oklch(0.58 0.1 145);
+  --color-grape: oklch(0.64 0.13 295);
+  --color-grape-deep: oklch(0.55 0.14 315);
+  --color-amenity: oklch(0.95 0.012 75);
+  --color-amenity-ink: oklch(0.44 0.03 65);
+
+  --font-display: var(--font-bricolage);
+  --font-body: var(--font-instrument);
+  --font-mono: var(--font-dm-mono);
+}
+
+html {
+  background: #e7dcca;
 }
 
 body {
-  background-color: var(--color-paper);
   color: var(--color-ink);
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-body), system-ui, sans-serif;
   min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: var(--color-butter);
-}
-
-/* faint paper grain over everything */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 50;
-  opacity: 0.05;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  background: oklch(0.9 0.06 45);
 }
 
 @layer components {
+  /* Surfaces */
   .card {
-    @apply rounded-2xl border border-line bg-card p-5 shadow-[0_2px_10px_rgba(120,94,48,0.08)];
+    @apply rounded-[22px] border border-line bg-surface shadow-[0_10px_28px_-22px_rgba(60,40,20,0.5)];
   }
+  .panel {
+    @apply rounded-2xl border border-line bg-surface;
+  }
+
+  /* Buttons */
   .btn-primary,
   .btn-ghost,
   .btn-danger {
-    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition-transform duration-100 active:scale-[0.97] disabled:cursor-default disabled:opacity-40;
+    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-[transform,background-color] duration-100 active:scale-[0.98] disabled:cursor-default disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-primary {
-    @apply bg-clay text-paper hover:bg-clay-deep;
+    @apply bg-clay text-white shadow-[0_10px_22px_-12px_var(--color-clay)] hover:bg-clay-deep;
   }
   .btn-ghost {
-    @apply border border-line bg-transparent text-ink hover:bg-butter/50;
+    @apply border border-line bg-transparent text-ink hover:bg-amenity;
   }
   .btn-danger {
-    @apply border border-clay/40 bg-transparent text-clay hover:bg-clay/10;
+    @apply bg-transparent text-[oklch(0.55_0.13_25)] hover:bg-[oklch(0.95_0.03_25)];
   }
+
+  /* Forms */
   .input {
-    @apply w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm outline-none placeholder:text-faded/70 focus:border-clay;
+    @apply w-full rounded-xl border border-line bg-paper px-3 py-2.5 text-sm text-ink outline-none placeholder:text-faded/70 focus:border-clay;
   }
   .label {
-    @apply mb-1 block text-[11px] font-bold tracking-[0.12em] uppercase text-faded;
+    @apply mb-1.5 block font-mono text-[11px] font-medium tracking-wide text-faded uppercase;
   }
-  .section-title {
-    @apply font-display text-2xl font-semibold tracking-tight;
+  .eyebrow {
+    @apply font-mono text-[12px] font-medium tracking-wide text-faded uppercase;
+  }
+
+  /* Bits */
+  .amenity {
+    @apply rounded-full bg-amenity px-2.5 py-1 font-mono text-[11px] font-medium text-amenity-ink;
   }
   .day-pill {
-    @apply cursor-pointer rounded-full border border-line px-3 py-1.5 text-sm font-bold text-faded transition-colors peer-checked:border-clay peer-checked:bg-clay peer-checked:text-paper;
+    @apply cursor-pointer rounded-full border border-line px-3 py-1.5 text-sm font-semibold text-faded transition-colors peer-checked:border-clay peer-checked:bg-clay peer-checked:text-white;
+  }
+  .page-title {
+    @apply font-display text-3xl font-bold tracking-tight text-ink sm:text-[34px];
+  }
+  .section-title {
+    @apply font-display text-2xl font-semibold tracking-tight text-ink;
   }
 }

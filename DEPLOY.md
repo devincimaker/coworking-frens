@@ -19,20 +19,18 @@ repo is already wired for them.
 
 Keep these two strings for step 3.
 
-## 2. Create Google OAuth credentials
+## 2. Set up Resend (login emails)
 
-Real sign-in uses Google. (The passwordless "dev login" is disabled in production.)
+Sign-in is passwordless: users enter their email and get a one-time **magic link** to
+click. Those links are sent with Resend, so Resend is **required in production** — it's
+the same account that sends the reminder/notification emails. (The passwordless "dev
+login" is disabled in production.)
 
-1. <https://console.cloud.google.com> → create/select a project.
-2. **APIs & Services → OAuth consent screen** → External → fill the basics, add your
-   Google account as a test user.
-3. **APIs & Services → Credentials → Create credentials → OAuth client ID → Web
-   application**.
-4. Under **Authorized redirect URIs**, add:
-   `https://YOUR_VERCEL_DOMAIN/api/auth/callback/google`
-   (You can add `https://coworking-frens.vercel.app/...` now and your custom domain
-   later — you may add several.)
-5. Copy the **Client ID** → `AUTH_GOOGLE_ID` and **Client secret** → `AUTH_GOOGLE_SECRET`.
+1. <https://resend.com> → sign up, create an **API key** → `RESEND_API_KEY`.
+2. To email anyone other than yourself, **verify a domain** (Resend → Domains) and set
+   `EMAIL_FROM` to an address on it, e.g. `Coworking Frens <hola@tudominio.com>`.
+   The `onboarding@resend.dev` sandbox sender only delivers to your own verified address —
+   fine for a first test, not for inviting friends.
 
 ## 3. Deploy to Vercel
 
@@ -63,12 +61,10 @@ vercel --prod           # deploy
 | `DIRECT_URL`         | Neon **direct** string (from step 1)                            |
 | `AUTH_SECRET`        | run `openssl rand -base64 32`                                   |
 | `AUTH_TRUST_HOST`    | `true`                                                          |
-| `AUTH_GOOGLE_ID`     | from step 2                                                     |
-| `AUTH_GOOGLE_SECRET` | from step 2                                                     |
 | `APP_URL`            | your final URL, e.g. `https://coworking-frens.vercel.app`       |
 | `CRON_SECRET`        | run `openssl rand -hex 16` (Vercel Cron sends it automatically) |
-| `RESEND_API_KEY`     | from <https://resend.com> (optional; empty = emails logged only)|
-| `EMAIL_FROM`         | e.g. `Coworking Frens <onboarding@resend.dev>`                  |
+| `RESEND_API_KEY`     | from <https://resend.com> — **required** (magic-link login + emails) |
+| `EMAIL_FROM`         | an address on a domain you verified in Resend                   |
 
 ## 4. The daily job (reminders + auto-open)
 
@@ -79,7 +75,7 @@ day-before reminder emails. Vercel authenticates it automatically using `CRON_SE
 
 ## 5. First run
 
-1. Visit your URL, sign in with Google.
+1. Visit your URL, enter your email, and click the magic link it sends you.
 2. Open **Friends**, copy your invite link, send it to a friend — accepting it makes
    you mutual friends.
 3. Open **Host**, create your place, add a recurring rule or a one-off day.
@@ -110,7 +106,7 @@ git push -u origin main
 ## Custom domain
 
 Vercel → Settings → Domains → add your domain and follow the DNS steps. Then update
-`APP_URL` and add the new `/api/auth/callback/google` redirect URI in Google Console.
+`APP_URL` (used to build the magic-link URLs and invite links).
 
 ## Emails: going beyond the sandbox
 

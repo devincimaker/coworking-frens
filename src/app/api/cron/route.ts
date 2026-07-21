@@ -33,13 +33,13 @@ export async function GET(req: NextRequest) {
     const names = day.attendances.map((a) => a.user.name?.split(" ")[0]).filter(Boolean);
     const who =
       names.length === 0
-        ? "Nobody has claimed a spot yet."
-        : `Coming: ${names.join(", ")}.`;
+        ? "Todavía no se sumó nadie."
+        : `Van: ${names.join(", ")}.`;
     const recipients = [day.host.email, ...day.attendances.map((a) => a.user.email)];
     await sendEmail(
       recipients,
-      `Tomorrow: coworking at ${day.place.nickname}, ${day.startTime}–${day.endTime}`,
-      `Reminder: ${day.host.name} is hosting at ${day.place.nickname} tomorrow (${day.date}), ${day.startTime}–${day.endTime}. ${who}\n\n${appUrl()}/day/${day.id}`
+      `Mañana: juntada en ${day.place.nickname}, ${day.startTime}–${day.endTime}`,
+      `Recordatorio: ${day.host.name} hostea en ${day.place.nickname} mañana (${day.date}), ${day.startTime}–${day.endTime}. ${who}\n\n${appUrl()}/day/${day.id}`
     );
     await prisma.coworkDay.update({ where: { id: day.id }, data: { reminderSent: true } });
     reminders++;
