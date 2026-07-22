@@ -37,6 +37,11 @@ type ProfileFormState = {
   message: string;
 };
 
+type PlaceFormState = ProfileFormState;
+type HostDayFormState = ProfileFormState;
+
+const MAX_PLACE_PHOTOS = 9;
+
 // --- Profile ---
 
 async function validateProfileFields(
@@ -121,8 +126,15 @@ export async function updateProfile(
 
 // --- Place ---
 
-export async function savePlace(formData: FormData) {
+export async function savePlace(
+  _prevState: PlaceFormState,
+  formData: FormData
+): Promise<PlaceFormState> {
   const user = await requireOnboardedUser();
+  const existingPlace = await prisma.place.findUnique({
+    where: { hostId: user.id },
+    select: { id: true },
+  });
   const data = {
     nickname: String(formData.get("nickname") ?? "").trim() || "My place",
     address: String(formData.get("address") ?? "").trim(),
@@ -130,12 +142,39 @@ export async function savePlace(formData: FormData) {
     amenities: String(formData.get("amenities") ?? "").trim(),
     defaultCapacity: Math.max(1, Number(formData.get("defaultCapacity") ?? 4) || 4),
   };
+  const photoResult = normalizePlacePhotoUrls(formData.getAll("photoUrls"));
+  if (!photoResult.ok) return { status: "error", message: photoResult.message };
+  const photos = photoResult.urls.map((url, sortOrder) => ({ url, sortOrder }));
+
   await prisma.place.upsert({
     where: { hostId: user.id },
-    update: data,
-    create: { hostId: user.id, ...data },
+    update: { ...data, photos: { deleteMany: {}, create: photos } },
+    create: { hostId: user.id, ...data, photos: { create: photos } },
   });
-  revalidatePath("/host");
+  revalidateAll();
+
+  return {
+    status: "success",
+    message: existingPlace ? "Lugar guardado." : "Lugar creado.",
+  };
+}
+
+function normalizePlacePhotoUrls(entries: FormDataEntryValue[]) {
+  const seen = new Set<string>();
+  const urls: string[] = [];
+
+  for (const entry of entries) {
+    const result = normalizeImageUrl(entry);
+    if (!result.ok) return { ok: false as const, message: result.message };
+    if (!result.image || seen.has(result.image)) continue;
+    if (urls.length >= MAX_PLACE_PHOTOS) {
+      return { ok: false as const, message: `Subí hasta ${MAX_PLACE_PHOTOS} fotos.` };
+    }
+    seen.add(result.image);
+    urls.push(result.image);
+  }
+
+  return { ok: true as const, urls };
 }
 
 // --- Days ---
@@ -157,13 +196,30 @@ async function assertOwnCircleOrNull(userId: string, raw: FormDataEntryValue | n
   return circleId;
 }
 
-export async function createOneOffDay(formData: FormData) {
+export async function createOneOffDay(
+  _prevState: HostDayFormState,
+  formData: FormData
+): Promise<HostDayFormState> {
   const user = await requireOnboardedUser();
   const date = String(formData.get("date") ?? "");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < todayBA()) throw new Error("Invalid date");
-  const { startTime, endTime } = parseTimes(formData);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < todayBA()) {
+    return { status: "error", message: "Elegí una fecha válida." };
+  }
+
+  let times;
+  try {
+    times = parseTimes(formData);
+  } catch {
+    return { status: "error", message: "Revisá el horario: la hora de cierre va después." };
+  }
+  const { startTime, endTime } = times;
   const capacity = Math.max(1, Number(formData.get("capacity") ?? 4) || 4);
-  const circleId = await assertOwnCircleOrNull(user.id, formData.get("circleId"));
+  let circleId;
+  try {
+    circleId = await assertOwnCircleOrNull(user.id, formData.get("circleId"));
+  } catch {
+    return { status: "error", message: "Ese círculo no está disponible." };
+  }
 
   const day = await createDay({ hostId: user.id, date, startTime, endTime, capacity, circleId });
 
@@ -173,6 +229,11 @@ export async function createOneOffDay(formData: FormData) {
     `${user.name} abre una juntada para laburar en ${day.place.nickname} el ${formatDay(date)}, ${startTime}–${endTime}. ${capacity} lugares.\n\nSumate: ${appUrl()}/day/${day.id}`
   );
   revalidateAll();
+
+  return {
+    status: "success",
+    message: `Listo, nueva juntada abierta para ${formatDay(date)}. Ya aparece en tus próximas juntadas.`,
+  };
 }
 
 export async function cancelDay(formData: FormData) {
@@ -263,18 +324,33 @@ export async function removeAttendee(formData: FormData) {
 
 // --- Rules ---
 
-export async function createRule(formData: FormData) {
+export async function createRule(
+  _prevState: HostDayFormState,
+  formData: FormData
+): Promise<HostDayFormState> {
   const user = await requireOnboardedUser();
   const weekdays = formData
     .getAll("weekdays")
     .map(Number)
     .filter((n) => n >= 0 && n <= 6);
-  if (weekdays.length === 0) throw new Error("Pick at least one weekday");
-  const { startTime, endTime } = parseTimes(formData);
+  if (weekdays.length === 0) return { status: "error", message: "Elegí al menos un día." };
+
+  let times;
+  try {
+    times = parseTimes(formData);
+  } catch {
+    return { status: "error", message: "Revisá el horario: la hora de cierre va después." };
+  }
+  const { startTime, endTime } = times;
   const capacity = Math.max(1, Number(formData.get("capacity") ?? 4) || 4);
-  const circleId = await assertOwnCircleOrNull(user.id, formData.get("circleId"));
+  let circleId;
+  try {
+    circleId = await assertOwnCircleOrNull(user.id, formData.get("circleId"));
+  } catch {
+    return { status: "error", message: "Ese círculo no está disponible." };
+  }
   const place = await prisma.place.findUnique({ where: { hostId: user.id } });
-  if (!place) throw new Error("Set up your place first");
+  if (!place) return { status: "error", message: "Primero creá tu lugar." };
 
   const rule = await prisma.availabilityRule.create({
     data: { hostId: user.id, weekdays: weekdays.join(","), startTime, endTime, capacity, circleId },
@@ -294,6 +370,11 @@ export async function createRule(formData: FormData) {
     `${user.name} abrió ${place.nickname} para laburar todos los ${days}, ${startTime}–${endTime} (${capacity} lugares).\n\nMirá las próximas juntadas: ${appUrl()}/juntadas`
   );
   revalidateAll();
+
+  return {
+    status: "success",
+    message: `Listo, nueva juntada recurrente creada. Ya abrimos las próximas fechas.`,
+  };
 }
 
 /** Deactivating (or deleting) a rule cancels its future instances and notifies attendees. */

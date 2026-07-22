@@ -3,7 +3,7 @@ import { todayBA } from "@/lib/tz";
 
 export const dayInclude = {
   host: { select: { id: true, name: true, image: true, email: true } },
-  place: true,
+  place: { include: { photos: { orderBy: { sortOrder: "asc" as const } } } },
   attendances: {
     include: { user: { select: { id: true, name: true, image: true } } },
     orderBy: { joinedAt: "asc" as const },
@@ -36,7 +36,10 @@ export async function dayForUser(dayId: string, userId: string) {
 
 export async function hostData(userId: string) {
   const [place, rules, days] = await Promise.all([
-    prisma.place.findUnique({ where: { hostId: userId } }),
+    prisma.place.findUnique({
+      where: { hostId: userId },
+      include: { photos: { orderBy: { sortOrder: "asc" } } },
+    }),
     prisma.availabilityRule.findMany({
       where: { hostId: userId },
       include: { circle: { select: { id: true, name: true } } },

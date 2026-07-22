@@ -20,6 +20,8 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
   const cancelled = day.status === "cancelled";
   const a = accentFor(day.hostId);
   const left = day.capacity - day.attendances.length;
+  const placePhotos = day.place.photos;
+  const primaryPhoto = placePhotos[0] ?? null;
   const amenities = (day.place.amenities ?? "")
     .split(",")
     .map((x) => x.trim())
@@ -28,10 +30,27 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
   return (
     <div className="mx-auto max-w-2xl">
       {/* Banner */}
-      <div className="relative -mx-5 -mt-6 h-52 overflow-hidden sm:-mx-6 md:-mx-11 md:-mt-10 md:rounded-b-[26px]" style={{ background: stripes(a, 22) }}>
-        <div className="absolute inset-0 flex items-center justify-center font-mono text-[12px] opacity-70" style={{ color: a.accent }}>
-          [ foto de la casa ]
-        </div>
+      <div
+        className="relative -mx-5 -mt-6 h-52 overflow-hidden sm:-mx-6 md:-mx-11 md:-mt-10 md:rounded-b-[26px]"
+        style={{ background: stripes(a, 22) }}
+      >
+        {primaryPhoto ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={primaryPhoto.url}
+              alt={`Foto de ${day.place.nickname}`}
+              className="h-full w-full object-cover"
+            />
+          </>
+        ) : (
+          <div
+            className="absolute inset-0 flex items-center justify-center font-mono text-[12px] opacity-70"
+            style={{ color: a.accent }}
+          >
+            [ foto de la casa ]
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-[rgba(28,20,14,0.55)] to-transparent to-55%" />
         <Link
           href="/juntadas"
@@ -106,6 +125,25 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
         {/* The house */}
         <div className="card mt-6 p-4">
           <h3 className="mb-2 font-display text-base font-semibold text-ink">La casa</h3>
+          {placePhotos.length > 1 && (
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              {placePhotos.map((photo, index) => (
+                <div
+                  key={photo.id}
+                  className={`overflow-hidden rounded-2xl bg-paper ${
+                    index === 0 ? "col-span-2 aspect-[16/9]" : "aspect-[4/3]"
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photo.url}
+                    alt={`Foto ${index + 1} de ${day.place.nickname}`}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
           <div className="space-y-3 text-sm">
             <div>
               <p className="label">Dirección</p>

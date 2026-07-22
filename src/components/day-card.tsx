@@ -14,7 +14,12 @@ type DayWithRelations = {
   endTime: string;
   capacity: number;
   host: Person;
-  place: { nickname: string; address?: string; amenities?: string };
+  place: {
+    nickname: string;
+    address?: string;
+    amenities?: string;
+    photos?: { id: string; url: string }[];
+  };
   attendances: { user: Person }[];
 };
 
@@ -121,6 +126,7 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
   const a = accentFor(day.hostId);
   const hood = neighborhood(day.place.address);
   const amenities = amenityList(day.place.amenities).slice(0, 4);
+  const primaryPhoto = day.place.photos?.[0] ?? null;
   const shown = attendees.slice(0, 4);
   const extra = attendees.length - shown.length;
 
@@ -141,9 +147,28 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
           className="relative block h-32 w-full shrink-0 md:h-auto md:w-[200px]"
           style={{ background: stripes(a) }}
         >
-          <span className="absolute inset-0 flex items-center justify-center font-mono text-[11px] opacity-70" style={{ color: a.accent }}>
-            [ foto ]
-          </span>
+          {primaryPhoto ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={primaryPhoto.url}
+                alt={`Foto de ${day.place.nickname}`}
+                className="h-full w-full object-cover"
+              />
+              {day.place.photos && day.place.photos.length > 1 && (
+                <span className="absolute right-2 bottom-2 rounded-full bg-ink/70 px-2 py-1 font-mono text-[10px] font-semibold text-white backdrop-blur-sm">
+                  {day.place.photos.length} fotos
+                </span>
+              )}
+            </>
+          ) : (
+            <span
+              className="absolute inset-0 flex items-center justify-center font-mono text-[11px] opacity-70"
+              style={{ color: a.accent }}
+            >
+              [ foto ]
+            </span>
+          )}
         </Link>
 
         {/* DÓNDE — casa + anfitrión */}

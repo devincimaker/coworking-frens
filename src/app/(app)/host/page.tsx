@@ -6,59 +6,9 @@ import { materializeRules } from "@/lib/days";
 import { formatDay, WEEKDAY_LABELS, addDays, todayBA } from "@/lib/tz";
 import { AvatarStack } from "@/components/avatar";
 import { SpotsChip } from "@/components/day-card";
-import {
-  savePlace,
-  createOneOffDay,
-  createRule,
-  toggleRule,
-  deleteRule,
-  cancelDay,
-} from "@/lib/actions";
-
-function CircleSelect({
-  circles,
-  defaultValue,
-}: {
-  circles: { id: string; name: string }[];
-  defaultValue?: string;
-}) {
-  return (
-    <select name="circleId" defaultValue={defaultValue ?? ""} className="input">
-      <option value="">Todos mis amigos</option>
-      {circles.map((c) => (
-        <option key={c.id} value={c.id}>
-          Solo “{c.name}”
-        </option>
-      ))}
-    </select>
-  );
-}
-
-function TimeCapacityFields({ defaultCapacity }: { defaultCapacity: number }) {
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      <div>
-        <label className="label">Desde</label>
-        <input name="startTime" type="time" defaultValue="09:00" required className="input" />
-      </div>
-      <div>
-        <label className="label">Hasta</label>
-        <input name="endTime" type="time" defaultValue="17:00" required className="input" />
-      </div>
-      <div>
-        <label className="label">Lugares</label>
-        <input
-          name="capacity"
-          type="number"
-          min={1}
-          max={20}
-          defaultValue={defaultCapacity}
-          className="input"
-        />
-      </div>
-    </div>
-  );
-}
+import { HostPlaceForm } from "@/components/host-place-form";
+import { HostDayForms } from "@/components/host-day-forms";
+import { toggleRule, deleteRule, cancelDay } from "@/lib/actions";
 
 export default async function HostPage() {
   const session = await auth();
@@ -79,61 +29,7 @@ export default async function HostPage() {
       <div className="space-y-9">
         <section>
           <p className="eyebrow mb-2.5">Mi lugar</p>
-          <form action={savePlace} className="card space-y-3 p-5">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="label">Nombre</label>
-                <input
-                  name="nickname"
-                  defaultValue={place?.nickname ?? ""}
-                  placeholder="El Nido"
-                  required
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="label">Lugares por defecto</label>
-                <input
-                  name="defaultCapacity"
-                  type="number"
-                  min={1}
-                  max={20}
-                  defaultValue={place?.defaultCapacity ?? 4}
-                  className="input"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="label">Dirección</label>
-              <input
-                name="address"
-                defaultValue={place?.address ?? ""}
-                placeholder="Gorriti 4380, Palermo"
-                required
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="label">Cómo llegar (lo ven los que van)</label>
-              <textarea
-                name="arrivalNotes"
-                defaultValue={place?.arrivalNotes ?? ""}
-                placeholder="Tocá 3B, el perro es amigable, la clave del wifi está en la heladera"
-                rows={2}
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="label">El setup (separado por comas)</label>
-              <input
-                name="amenities"
-                defaultValue={place?.amenities ?? ""}
-                placeholder="wifi rápido, 2 monitores, café, balcón"
-                className="input"
-              />
-            </div>
-            <button className="btn-primary">{place ? "Guardar" : "Crear mi lugar"}</button>
-          </form>
+          <HostPlaceForm place={place} />
         </section>
 
         {place && (
@@ -183,60 +79,12 @@ export default async function HostPage() {
                   </div>
                 ))}
 
-                <details className="panel p-4">
-                  <summary className="cursor-pointer text-sm font-semibold text-clay">
-                    + Días fijos por semana
-                  </summary>
-                  <form action={createRule} className="mt-4 space-y-3">
-                    <div>
-                      <label className="label">Qué días</label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {WEEKDAY_LABELS.map((label, i) => (
-                          <label key={i}>
-                            <input
-                              type="checkbox"
-                              name="weekdays"
-                              value={i}
-                              className="peer sr-only"
-                            />
-                            <span className="day-pill">{label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                    <TimeCapacityFields defaultCapacity={place.defaultCapacity} />
-                    <div>
-                      <label className="label">Quién puede venir</label>
-                      <CircleSelect circles={circles} />
-                    </div>
-                    <button className="btn-primary">Abrir estos días</button>
-                  </form>
-                </details>
-
-                <details className="panel p-4">
-                  <summary className="cursor-pointer text-sm font-semibold text-clay">
-                    + Un día suelto
-                  </summary>
-                  <form action={createOneOffDay} className="mt-4 space-y-3">
-                    <div>
-                      <label className="label">Fecha</label>
-                      <input
-                        name="date"
-                        type="date"
-                        min={todayBA()}
-                        defaultValue={addDays(todayBA(), 1)}
-                        required
-                        className="input"
-                      />
-                    </div>
-                    <TimeCapacityFields defaultCapacity={place.defaultCapacity} />
-                    <div>
-                      <label className="label">Quién puede venir</label>
-                      <CircleSelect circles={circles} />
-                    </div>
-                    <button className="btn-primary">Abrir este día</button>
-                  </form>
-                </details>
+                <HostDayForms
+                  circles={circles}
+                  defaultCapacity={place.defaultCapacity}
+                  minDate={todayBA()}
+                  defaultDate={addDays(todayBA(), 1)}
+                />
               </div>
             </section>
 
@@ -248,6 +96,16 @@ export default async function HostPage() {
                 <div className="space-y-2.5">
                   {days.map((day) => (
                     <div key={day.id} className="panel flex items-center gap-3 p-4">
+                      {day.place.photos[0] && (
+                        <div className="h-14 w-16 shrink-0 overflow-hidden rounded-xl bg-paper">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={day.place.photos[0].url}
+                            alt={`Foto de ${day.place.nickname}`}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
                         <Link href={`/day/${day.id}`} className="text-sm font-semibold text-ink hover:text-clay">
                           {formatDay(day.date)}{" "}

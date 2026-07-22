@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 
 type UploadFolder = "avatars" | "places";
+type ImageUploadVariant = "avatar" | "place";
 
 type ImageUploadFieldProps = {
   id: string;
@@ -20,7 +21,8 @@ type ImageUploadFieldProps = {
 };
 
 const MAX_SOURCE_BYTES = 12 * 1024 * 1024;
-const OUTPUT_SIZE = 720;
+const AVATAR_OUTPUT_SIZE = 720;
+const PLACE_MAX_EDGE = 1600;
 const TARGET_BYTES = 1.6 * 1024 * 1024;
 const ALLOWED_OUTPUT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -56,22 +58,49 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) 
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
 }
 
-async function optimizeImage(file: File) {
-  const image = await loadImage(file);
+function avatarCanvasSize(image: HTMLImageElement) {
   const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
   if (!sourceSize) throw new Error("No pudimos leer esa imagen.");
 
+  const size = Math.min(AVATAR_OUTPUT_SIZE, sourceSize);
+  return {
+    width: size,
+    height: size,
+    sx: Math.floor((image.naturalWidth - sourceSize) / 2),
+    sy: Math.floor((image.naturalHeight - sourceSize) / 2),
+    sw: sourceSize,
+    sh: sourceSize,
+  };
+}
+
+function placeCanvasSize(image: HTMLImageElement) {
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
+  if (!width || !height) throw new Error("No pudimos leer esa imagen.");
+
+  const scale = Math.min(1, PLACE_MAX_EDGE / Math.max(width, height));
+  return {
+    width: Math.round(width * scale),
+    height: Math.round(height * scale),
+    sx: 0,
+    sy: 0,
+    sw: width,
+    sh: height,
+  };
+}
+
+async function optimizeImage(file: File, variant: ImageUploadVariant) {
+  const image = await loadImage(file);
+  const size = variant === "avatar" ? avatarCanvasSize(image) : placeCanvasSize(image);
+
   const canvas = document.createElement("canvas");
-  const size = Math.min(OUTPUT_SIZE, sourceSize);
-  canvas.width = size;
-  canvas.height = size;
+  canvas.width = size.width;
+  canvas.height = size.height;
 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("No pudimos preparar la imagen.");
 
-  const sx = Math.floor((image.naturalWidth - sourceSize) / 2);
-  const sy = Math.floor((image.naturalHeight - sourceSize) / 2);
-  ctx.drawImage(image, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+  ctx.drawImage(image, size.sx, size.sy, size.sw, size.sh, 0, 0, size.width, size.height);
 
   let fallback: Blob | null = null;
   for (const type of ["image/webp", "image/jpeg"]) {
@@ -91,6 +120,39 @@ async function optimizeImage(file: File) {
   return new File([fallback], `${safeFileStem(file.name)}.${extensionFor(fallback.type)}`, {
     type: fallback.type,
   });
+}
+
+export async function uploadOptimizedImage({
+  file,
+  folder = "avatars",
+  variant = "avatar",
+  onProgress,
+}: {
+  file: File;
+  folder?: UploadFolder;
+  variant?: ImageUploadVariant;
+  onProgress?: (progress: number) => void;
+}) {
+  if (!file.type.startsWith("image/")) throw new Error("Elegí una imagen.");
+  if (file.size > MAX_SOURCE_BYTES) throw new Error("Usá una imagen de menos de 12 MB.");
+
+  onProgress?.(8);
+  const optimized = await optimizeImage(file, variant);
+  if (!ALLOWED_OUTPUT_TYPES.has(optimized.type)) throw new Error("Formato de imagen inválido.");
+
+  const blob = await upload(
+    `${folder}/${safeFileStem(file.name)}.${extensionFor(optimized.type)}`,
+    optimized,
+    {
+      access: "public",
+      contentType: optimized.type,
+      handleUploadUrl: "/api/blob/upload",
+      clientPayload: JSON.stringify({ folder }),
+      onUploadProgress: ({ percentage }) => onProgress?.(Math.max(8, Math.round(percentage))),
+    }
+  );
+
+  return blob.url;
 }
 
 export function ImageUploadField({
@@ -117,36 +179,18 @@ export function ImageUploadField({
     if (!file || disabled || uploading) return;
     setError("");
 
-    if (!file.type.startsWith("image/")) {
-      setError("Elegí una imagen.");
-      return;
-    }
-    if (file.size > MAX_SOURCE_BYTES) {
-      setError("Usá una imagen de menos de 12 MB.");
-      return;
-    }
-
     setUploading(true);
     setProgress(8);
     onBusyChange?.(true);
 
     try {
-      const optimized = await optimizeImage(file);
-      if (!ALLOWED_OUTPUT_TYPES.has(optimized.type)) throw new Error("Formato de imagen inválido.");
-
-      const blob = await upload(
-        `${folder}/${safeFileStem(file.name)}.${extensionFor(optimized.type)}`,
-        optimized,
-        {
-          access: "public",
-          contentType: optimized.type,
-          handleUploadUrl: "/api/blob/upload",
-          clientPayload: JSON.stringify({ folder }),
-          onUploadProgress: ({ percentage }) => setProgress(Math.max(8, Math.round(percentage))),
-        }
-      );
-
-      onChange(blob.url);
+      const url = await uploadOptimizedImage({
+        file,
+        folder,
+        variant: "avatar",
+        onProgress: setProgress,
+      });
+      onChange(url);
       setProgress(100);
     } catch (uploadError) {
       const message =
