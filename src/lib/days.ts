@@ -22,6 +22,7 @@ export async function createDay(opts: {
   startTime: string;
   endTime: string;
   capacity: number;
+  description?: string;
   circleId: string | null;
   ruleId?: string;
 }) {
@@ -36,6 +37,7 @@ export async function createDay(opts: {
       startTime: opts.startTime,
       endTime: opts.endTime,
       capacity: opts.capacity,
+      description: opts.description ?? "",
       ruleId: opts.ruleId,
       audience: { create: audience.map((userId) => ({ userId })) },
     },
@@ -65,6 +67,7 @@ export async function materializeRules() {
         startTime: rule.startTime,
         endTime: rule.endTime,
         capacity: rule.capacity,
+        description: rule.description,
         circleId: rule.circleId,
         ruleId: rule.id,
       });

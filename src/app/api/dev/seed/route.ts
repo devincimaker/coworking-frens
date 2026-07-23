@@ -56,10 +56,24 @@ export async function GET() {
   });
 
   // Recurring: Ana opens Tue+Thu to all friends
+  const anaRuleDescription =
+    "Foco tranquilo a la mañana, almuerzo liviano y charlas de producto después.";
   const rule = await prisma.availabilityRule.findFirst({ where: { hostId: ana.id } });
   if (!rule) {
     await prisma.availabilityRule.create({
-      data: { hostId: ana.id, weekdays: "2,4", startTime: "09:00", endTime: "17:00", capacity: 3 },
+      data: {
+        hostId: ana.id,
+        weekdays: "2,4",
+        startTime: "09:00",
+        endTime: "17:00",
+        capacity: 3,
+        description: anaRuleDescription,
+      },
+    });
+  } else if (!rule.description) {
+    await prisma.availabilityRule.update({
+      where: { id: rule.id },
+      data: { description: anaRuleDescription },
     });
   }
   await materializeRules();
@@ -75,6 +89,7 @@ export async function GET() {
       startTime: "10:00",
       endTime: "16:00",
       capacity: 2,
+      description: "Deep work sin calls: auriculares, mate y una pausa corta al sol.",
       circleId: circle.id,
     });
   }
@@ -92,10 +107,23 @@ export async function GET() {
       defaultCapacity: 2,
     },
   });
+  const marcoRuleDescription = "Día social de terraza: buen wifi, mate y espacio para calls cortas.";
   const marcoRule = await prisma.availabilityRule.findFirst({ where: { hostId: marco.id } });
   if (!marcoRule) {
     await prisma.availabilityRule.create({
-      data: { hostId: marco.id, weekdays: "1,3,5", startTime: "10:00", endTime: "18:00", capacity: 2 },
+      data: {
+        hostId: marco.id,
+        weekdays: "1,3,5",
+        startTime: "10:00",
+        endTime: "18:00",
+        capacity: 2,
+        description: marcoRuleDescription,
+      },
+    });
+  } else if (!marcoRule.description) {
+    await prisma.availabilityRule.update({
+      where: { id: marcoRule.id },
+      data: { description: marcoRuleDescription },
     });
   }
   await materializeRules();
