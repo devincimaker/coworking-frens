@@ -29,9 +29,8 @@ export function OnboardingForm({
   const [bio, setBio] = useState(user.bio ?? "");
   const [state, formAction, pending] = useActionState(completeOnboarding, initialState);
   const previewName = name.trim() || username || user.email.split("@")[0];
-  const previewImage = image.trim() || null;
   const statusClass = state.status === "error" ? "text-clay" : "text-olive";
-  const submitDisabled = pending || imageBusy || !previewImage;
+  const submitDisabled = pending || imageBusy;
 
   return (
     <form action={formAction} className="card overflow-hidden p-5">
@@ -47,11 +46,10 @@ export function OnboardingForm({
       <div className="space-y-3">
         <ImageUploadField
           id="onboarding-image"
-          label="Foto"
+          label="Foto opcional"
           value={image}
           onChange={setImage}
           previewName={previewName}
-          required
           disabled={pending}
           onBusyChange={setImageBusy}
         />

@@ -44,11 +44,7 @@ const MAX_PLACE_PHOTOS = 9;
 
 // --- Profile ---
 
-async function validateProfileFields(
-  formData: FormData,
-  userId: string,
-  options: { requireImage: boolean }
-) {
+async function validateProfileFields(formData: FormData, userId: string) {
   const name = normalizeName(formData.get("name"));
   const username = normalizeUsername(formData.get("username"));
   const bio = normalizeBio(formData.get("bio"));
@@ -68,9 +64,6 @@ async function validateProfileFields(
   }
 
   if (!imageResult.ok) return { ok: false as const, message: imageResult.message };
-  if (options.requireImage && !imageResult.image) {
-    return { ok: false as const, message: "Pegá una URL para tu foto." };
-  }
 
   const existing = await prisma.user.findUnique({
     where: { username },
@@ -91,7 +84,7 @@ export async function completeOnboarding(
   formData: FormData
 ): Promise<ProfileFormState> {
   const user = await requireUser();
-  const result = await validateProfileFields(formData, user.id, { requireImage: true });
+  const result = await validateProfileFields(formData, user.id);
 
   if (!result.ok) return { status: "error", message: result.message };
 
@@ -109,7 +102,7 @@ export async function updateProfile(
   formData: FormData
 ): Promise<ProfileFormState> {
   const user = await requireOnboardedUser();
-  const result = await validateProfileFields(formData, user.id, { requireImage: false });
+  const result = await validateProfileFields(formData, user.id);
 
   if (!result.ok) return { status: "error", message: result.message };
 
