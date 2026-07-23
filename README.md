@@ -35,6 +35,9 @@ Sign-in is a passwordless **email magic link** (via Resend). With no `RESEND_API
 in local development, the magic link is logged to the server console instead of sent.
 Profile photos upload directly to **Vercel Blob**; set `BLOB_READ_WRITE_TOKEN` locally
 with `vercel env pull` after creating a Blob store in the Vercel project.
+The host address picker uses **Google Maps Places Autocomplete** when
+`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set; without it, local development falls back to
+manual address entry.
 `GET /api/dev/seed` creates a sample friend group (Ana, Marco, Lea)
 with two hosted places to click around.
 

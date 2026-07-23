@@ -42,6 +42,7 @@ type HostDayFormState = ProfileFormState;
 
 const MAX_PLACE_PHOTOS = 9;
 const MAX_DAY_DESCRIPTION_LENGTH = 280;
+const MAX_PLACE_TEXT = 240;
 
 // --- Profile ---
 
@@ -129,9 +130,12 @@ export async function savePlace(
     where: { hostId: user.id },
     select: { id: true },
   });
+  const addressResult = normalizePlaceAddress(formData);
+  if (!addressResult.ok) return { status: "error", message: addressResult.message };
+
   const data = {
     nickname: String(formData.get("nickname") ?? "").trim() || "My place",
-    address: String(formData.get("address") ?? "").trim(),
+    ...addressResult.data,
     arrivalNotes: String(formData.get("arrivalNotes") ?? "").trim(),
     amenities: String(formData.get("amenities") ?? "").trim(),
     defaultCapacity: Math.max(1, Number(formData.get("defaultCapacity") ?? 4) || 4),
@@ -169,6 +173,72 @@ function normalizePlacePhotoUrls(entries: FormDataEntryValue[]) {
   }
 
   return { ok: true as const, urls };
+}
+
+function optionalPlaceText(raw: FormDataEntryValue | null) {
+  const value = String(raw ?? "").trim();
+  if (!value) return null;
+  return value.slice(0, MAX_PLACE_TEXT);
+}
+
+function parseCoordinate(raw: FormDataEntryValue | null, min: number, max: number) {
+  const value = String(raw ?? "").trim();
+  if (!value) return null;
+  const coordinate = Number(value);
+  if (!Number.isFinite(coordinate) || coordinate < min || coordinate > max) return undefined;
+  return coordinate;
+}
+
+function normalizePlaceAddress(formData: FormData) {
+  const address = String(formData.get("address") ?? "").trim();
+  if (!address) return { ok: false as const, message: "Elegí una dirección." };
+  if (address.length > MAX_PLACE_TEXT) {
+    return { ok: false as const, message: "La dirección tiene que tener menos de 240 caracteres." };
+  }
+
+  const googlePlaceId = optionalPlaceText(formData.get("googlePlaceId"));
+  if (!googlePlaceId) {
+    return {
+      ok: true as const,
+      data: {
+        address,
+        googlePlaceId: null,
+        latitude: null,
+        longitude: null,
+        addressLine1: null,
+        addressNeighborhood: null,
+        addressCity: null,
+        addressRegion: null,
+        addressCountry: null,
+        addressPostalCode: null,
+      },
+    };
+  }
+
+  const latitude = parseCoordinate(formData.get("latitude"), -90, 90);
+  const longitude = parseCoordinate(formData.get("longitude"), -180, 180);
+  if (latitude === undefined || longitude === undefined || latitude === null || longitude === null) {
+    return {
+      ok: false as const,
+      message: "No pude leer la ubicación de Google Maps. Volvé a elegir la dirección.",
+    };
+  }
+
+  return {
+    ok: true as const,
+    data: {
+      address,
+      googlePlaceId,
+      latitude,
+      longitude,
+      addressLine1: optionalPlaceText(formData.get("addressLine1")),
+      addressNeighborhood: optionalPlaceText(formData.get("addressNeighborhood")),
+      addressCity: optionalPlaceText(formData.get("addressCity")),
+      addressRegion: optionalPlaceText(formData.get("addressRegion")),
+      addressCountry: optionalPlaceText(formData.get("addressCountry")),
+      addressPostalCode: optionalPlaceText(formData.get("addressPostalCode")),
+    },
+  };
 }
 
 // --- Days ---

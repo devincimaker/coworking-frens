@@ -3,11 +3,21 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { savePlace } from "@/lib/actions";
+import { GoogleAddressPicker } from "@/components/google-address-picker";
 import { PlacePhotoGalleryField } from "@/components/place-photo-gallery-form";
 
 type HostPlace = {
   nickname: string;
   address: string;
+  googlePlaceId: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  addressLine1: string | null;
+  addressNeighborhood: string | null;
+  addressCity: string | null;
+  addressRegion: string | null;
+  addressCountry: string | null;
+  addressPostalCode: string | null;
   arrivalNotes: string;
   amenities: string;
   defaultCapacity: number;
@@ -28,7 +38,13 @@ function SubmitButton({ hasPlace, photoBusy }: { hasPlace: boolean; photoBusy: b
   );
 }
 
-export function HostPlaceForm({ place }: { place: HostPlace | null }) {
+export function HostPlaceForm({
+  place,
+  googleMapsApiKey,
+}: {
+  place: HostPlace | null;
+  googleMapsApiKey: string;
+}) {
   const [nickname, setNickname] = useState(place?.nickname ?? "");
   const [photoBusy, setPhotoBusy] = useState(false);
   const [state, formAction] = useActionState(savePlace, initialState);
@@ -66,19 +82,7 @@ export function HostPlaceForm({ place }: { place: HostPlace | null }) {
           />
         </div>
       </div>
-      <div>
-        <label htmlFor="place-address" className="label">
-          Dirección
-        </label>
-        <input
-          id="place-address"
-          name="address"
-          defaultValue={place?.address ?? ""}
-          placeholder="Gorriti 4380, Palermo"
-          required
-          className="input"
-        />
-      </div>
+      <GoogleAddressPicker apiKey={googleMapsApiKey} place={place} />
       <div>
         <label htmlFor="place-arrival-notes" className="label">
           Cómo llegar (lo ven los que van)

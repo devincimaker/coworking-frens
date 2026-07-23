@@ -62,15 +62,16 @@ photos later.
 
 Set these in Vercel -> Project -> Settings -> Environment Variables:
 
-| Variable            | Value                                                            |
-| ------------------- | ---------------------------------------------------------------- |
-| `AUTH_SECRET`       | run `openssl rand -base64 32`                                    |
-| `AUTH_TRUST_HOST`   | `true`                                                           |
-| `APP_URL`           | your final URL, e.g. `https://coworking-frens.vercel.app`        |
-| `CRON_SECRET`       | run `openssl rand -hex 16` (Vercel Cron sends it automatically)  |
-| `RESEND_API_KEY`    | from <https://resend.com> - required for magic-link login/emails |
-| `EMAIL_FROM`        | an address on a domain you verified in Resend                    |
-| `BLOB_READ_WRITE_TOKEN` | added by the connected Vercel Blob store; required for uploads |
+| Variable                          | Value                                                             |
+| --------------------------------- | ----------------------------------------------------------------- |
+| `AUTH_SECRET`                     | run `openssl rand -base64 32`                                     |
+| `AUTH_TRUST_HOST`                 | `true`                                                            |
+| `APP_URL`                         | your final URL, e.g. `https://coworking-frens.vercel.app`         |
+| `CRON_SECRET`                     | run `openssl rand -hex 16` (Vercel Cron sends it automatically)   |
+| `RESEND_API_KEY`                  | from <https://resend.com> - required for magic-link login/emails  |
+| `EMAIL_FROM`                      | an address on a domain you verified in Resend                     |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | browser key with Maps JavaScript API and Places API (new) enabled |
+| `BLOB_READ_WRITE_TOKEN`           | added by the connected Vercel Blob store; required for uploads    |
 
 Verify that the Neon integration also added `DATABASE_URL` and
 `DATABASE_URL_UNPOOLED` for Production.

@@ -29,7 +29,10 @@ export default async function HostPage() {
       <div className="space-y-9">
         <section>
           <p className="eyebrow mb-2.5">Mi lugar</p>
-          <HostPlaceForm place={place} />
+          <HostPlaceForm
+            place={place}
+            googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
+          />
         </section>
 
         {place && (

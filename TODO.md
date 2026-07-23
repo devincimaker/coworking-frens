@@ -7,9 +7,6 @@
 - [ ] Replace free-text amenities with preset options
   - Let hosts choose from a fixed set of amenities instead of typing arbitrary comma-separated text.
   - Store amenities as structured values so feed/day filters and place displays stay consistent.
-- [ ] Replace the address text field with a maps-backed address picker
-  - Integrate a provider such as Google Maps Places Autocomplete so hosts can enter accurate, normalized addresses.
-  - Store enough structured location data to display the address consistently and support future map-based features.
 - [ ] Add an in-app feedback system
   - Give users a simple way to send feedback, bug reports, or feature ideas from inside the app.
   - Store submitted feedback with user, page/context, message, and timestamp so it can be reviewed later.
@@ -47,3 +44,6 @@ _No tasks._
 - [x] Add descriptions to coworking days
   - Let hosts add an optional description when creating a new juntada or a recurrent juntada.
   - Surface the description in day cards, day detail pages, and host upcoming-day lists where it helps people decide whether to join.
+- [x] Replace the address text field with a maps-backed address picker
+  - Integrated Google Maps Places Autocomplete so hosts can enter accurate, normalized addresses.
+  - Stored Google place ID, coordinates, and parsed address fields for consistent display and future map-based features.

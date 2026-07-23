@@ -7,6 +7,25 @@ import { accentFor, stripes } from "@/lib/accent";
 import { Avatar } from "@/components/avatar";
 import { cancelDay, removeAttendee, joinDay, leaveDay } from "@/lib/actions";
 
+type MapsPlace = {
+  address: string;
+  googlePlaceId?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+function googleMapsHref(place: MapsPlace) {
+  const query =
+    place.latitude != null && place.longitude != null
+      ? `${place.latitude},${place.longitude}`
+      : place.address.trim();
+  if (!query) return null;
+
+  const params = new URLSearchParams({ api: "1", query });
+  if (place.googlePlaceId) params.set("query_place_id", place.googlePlaceId);
+  return `https://www.google.com/maps/search/?${params.toString()}`;
+}
+
 export default async function DayPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
@@ -23,6 +42,7 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
   const placePhotos = day.place.photos;
   const primaryPhoto = placePhotos[0] ?? null;
   const description = day.description.trim();
+  const mapsHref = googleMapsHref(day.place);
   const amenities = (day.place.amenities ?? "")
     .split(",")
     .map((x) => x.trim())
@@ -64,7 +84,18 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
         </Link>
         <div className="absolute inset-x-5 bottom-4 text-white">
           <h1 className="font-display text-2xl leading-tight font-bold">{day.place.nickname}</h1>
-          <p className="mt-0.5 text-sm opacity-90">{day.place.address || "Buenos Aires"}</p>
+          {mapsHref ? (
+            <a
+              href={mapsHref}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-0.5 inline-block text-sm opacity-90 underline-offset-4 hover:underline"
+            >
+              {day.place.address || "Buenos Aires"}
+            </a>
+          ) : (
+            <p className="mt-0.5 text-sm opacity-90">{day.place.address || "Buenos Aires"}</p>
+          )}
         </div>
       </div>
 
@@ -157,7 +188,18 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
           <div className="space-y-3 text-sm">
             <div>
               <p className="label">Dirección</p>
-              <p className="text-ink">{day.place.address || "Preguntale al anfitrión"}</p>
+              {mapsHref ? (
+                <a
+                  href={mapsHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex text-ink underline decoration-clay/35 underline-offset-4 transition-colors hover:text-clay"
+                >
+                  {day.place.address || "Preguntale al anfitrión"}
+                </a>
+              ) : (
+                <p className="text-ink">{day.place.address || "Preguntale al anfitrión"}</p>
+              )}
             </div>
             {amenities.length > 0 && (
               <div>

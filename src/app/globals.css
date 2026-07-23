@@ -64,6 +64,55 @@ body {
   .input {
     @apply w-full rounded-xl border border-line bg-paper px-3 py-2.5 text-sm text-ink outline-none placeholder:text-faded/70 focus:border-clay;
   }
+  .maps-address-shell {
+    @apply w-full;
+  }
+  .maps-address-shell gmp-place-autocomplete {
+    display: block;
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid var(--color-line);
+    border-radius: 0.75rem;
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    color-scheme: light;
+    font-family: var(--font-body), system-ui, sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    outline: none;
+  }
+  .maps-address-shell gmp-place-autocomplete::part(input) {
+    min-height: 40px;
+    padding: 0.625rem 0.75rem;
+    background-color: transparent;
+    color: var(--color-ink);
+    font-family: var(--font-body), system-ui, sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  .maps-address-shell gmp-place-autocomplete::part(focus-ring) {
+    border-color: var(--color-clay);
+    box-shadow: none;
+  }
+  .maps-address-shell gmp-place-autocomplete::part(prediction-list) {
+    margin-top: 0.25rem;
+    border: 1px solid var(--color-line);
+    border-radius: 0.75rem;
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    box-shadow: 0 18px 38px -28px rgba(60, 40, 20, 0.6);
+  }
+  .maps-address-shell gmp-place-autocomplete::part(prediction-item) {
+    color: var(--color-faded);
+    font-family: var(--font-body), system-ui, sans-serif;
+    font-size: 0.875rem;
+  }
+  .maps-address-shell gmp-place-autocomplete::part(prediction-item-main-text) {
+    color: var(--color-ink);
+  }
+  .maps-address-shell gmp-place-autocomplete::part(prediction-item-selected) {
+    background-color: var(--color-amenity);
+  }
   .label {
     @apply mb-1.5 block font-mono text-[11px] font-medium tracking-wide text-faded uppercase;
   }

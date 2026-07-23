@@ -18,6 +18,9 @@ type DayWithRelations = {
   place: {
     nickname: string;
     address?: string;
+    addressNeighborhood?: string | null;
+    addressCity?: string | null;
+    addressRegion?: string | null;
     amenities?: string;
     photos?: { id: string; url: string }[];
   };
@@ -26,11 +29,18 @@ type DayWithRelations = {
 
 const firstName = (name: string | null | undefined) => name?.split(" ")[0] ?? "alguien";
 
-/** Neighborhood = the bit after the last comma of the address (never the full street). */
-function neighborhood(address?: string) {
+/** Fallback for older manually-entered addresses, never the full street. */
+function areaFromAddress(address?: string) {
   if (!address) return null;
   const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
   return parts.length > 1 ? parts[parts.length - 1] : null;
+}
+
+function areaLabel(place: DayWithRelations["place"]) {
+  if (place.addressNeighborhood) return place.addressNeighborhood;
+  if (place.addressCity && place.addressCity !== "Capital") return place.addressCity;
+  if (place.addressRegion) return place.addressRegion;
+  return areaFromAddress(place.address);
 }
 
 function amenityList(amenities?: string) {
@@ -125,7 +135,7 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
   const joined = attendees.some((u) => u.id === userId);
   const full = attendees.length >= day.capacity;
   const a = accentFor(day.hostId);
-  const hood = neighborhood(day.place.address);
+  const hood = areaLabel(day.place);
   const amenities = amenityList(day.place.amenities).slice(0, 4);
   const primaryPhoto = day.place.photos?.[0] ?? null;
   const shown = attendees.slice(0, 4);
