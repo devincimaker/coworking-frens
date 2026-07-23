@@ -60,6 +60,21 @@ function TimeCapacityFields({ defaultCapacity }: { defaultCapacity: number }) {
   );
 }
 
+function DescriptionField({ placeholder }: { placeholder: string }) {
+  return (
+    <div>
+      <label className="label">Mood</label>
+      <textarea
+        name="description"
+        maxLength={280}
+        rows={3}
+        placeholder={placeholder}
+        className="input min-h-24 resize-y leading-relaxed"
+      />
+    </div>
+  );
+}
+
 function SubmitButton({ children }: { children: string }) {
   const { pending } = useFormStatus();
   return (
@@ -117,6 +132,7 @@ export function HostDayForms({
             </div>
           </div>
           <TimeCapacityFields defaultCapacity={defaultCapacity} />
+          <DescriptionField placeholder="Foco tranquilo, mate compartido, calls cortas en el balcón..." />
           <div>
             <label className="label">Quién puede venir</label>
             <CircleSelect circles={circles} />
@@ -143,6 +159,7 @@ export function HostDayForms({
             />
           </div>
           <TimeCapacityFields defaultCapacity={defaultCapacity} />
+          <DescriptionField placeholder="Deep work sin calls hasta el almuerzo, después café y revisión de demos..." />
           <div>
             <label className="label">Quién puede venir</label>
             <CircleSelect circles={circles} />

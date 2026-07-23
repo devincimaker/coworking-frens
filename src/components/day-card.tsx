@@ -13,6 +13,7 @@ type DayWithRelations = {
   startTime: string;
   endTime: string;
   capacity: number;
+  description: string;
   host: Person;
   place: {
     nickname: string;
@@ -129,6 +130,7 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
   const primaryPhoto = day.place.photos?.[0] ?? null;
   const shown = attendees.slice(0, 4);
   const extra = attendees.length - shown.length;
+  const description = day.description.trim();
 
   return (
     <div>
@@ -177,6 +179,11 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
             {day.place.nickname}
           </Link>
           {hood && <div className="mt-0.5 text-[13px] text-faded">{hood}</div>}
+          {description && (
+            <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink/80">
+              {description}
+            </p>
+          )}
           <div className="mt-4 flex items-center gap-2.5">
             <Avatar name={day.host.name} image={day.host.image} size={34} />
             <div className="leading-tight">

@@ -72,14 +72,14 @@ model CircleMember {
 }
 
 model Place {
-  id              String      @id @default(cuid())
-  hostId          String      @unique
+  id              String       @id @default(cuid())
+  hostId          String       @unique
   nickname        String
   address         String
-  arrivalNotes    String      @default("")
-  amenities       String      @default("") // free-text tags, comma-separated
-  defaultCapacity Int         @default(4)
-  host            User        @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  arrivalNotes    String       @default("")
+  amenities       String       @default("") // free-text tags, comma-separated
+  defaultCapacity Int          @default(4)
+  host            User         @relation(fields: [hostId], references: [id], onDelete: Cascade)
   photos          PlacePhoto[]
   days            CoworkDay[]
 }
@@ -96,15 +96,16 @@ model PlacePhoto {
 }
 
 model AvailabilityRule {
-  id        String   @id @default(cuid())
-  hostId    String
-  weekdays  String // csv of 0(Sun)-6(Sat), e.g. "2,4"
-  startTime String // "09:00"
-  endTime   String // "17:00"
-  capacity  Int
-  circleId  String? // null = all friends
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  hostId      String
+  weekdays    String // csv of 0(Sun)-6(Sat), e.g. "2,4"
+  startTime   String // "09:00"
+  endTime     String // "17:00"
+  capacity    Int
+  description String   @default("")
+  circleId    String? // null = all friends
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
   host   User        @relation(fields: [hostId], references: [id], onDelete: Cascade)
   circle Circle?     @relation(fields: [circleId], references: [id], onDelete: SetNull)
@@ -121,6 +122,7 @@ model CoworkDay {
   startTime    String // "09:00"
   endTime      String // "17:00"
   capacity     Int
+  description  String   @default("")
   status       String   @default("open") // open | cancelled
   ruleId       String?
   reminderSent Boolean  @default(false)

@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     await sendEmail(
       recipients,
       `Mañana: juntada en ${day.place.nickname}, ${day.startTime}–${day.endTime}`,
-      `Recordatorio: ${day.host.name} hostea en ${day.place.nickname} mañana (${day.date}), ${day.startTime}–${day.endTime}. ${who}\n\n${appUrl()}/day/${day.id}`
+      `Recordatorio: ${day.host.name} hostea en ${day.place.nickname} mañana (${day.date}), ${day.startTime}–${day.endTime}. ${who}${day.description ? `\n\nMood: ${day.description}` : ""}\n\n${appUrl()}/day/${day.id}`
     );
     await prisma.coworkDay.update({ where: { id: day.id }, data: { reminderSent: true } });
     reminders++;

@@ -54,6 +54,11 @@ export default async function HostPage() {
                         hasta {rule.capacity} · {rule.circle ? `“${rule.circle.name}”` : "todos"}
                         {!rule.active && " · pausada"}
                       </div>
+                      {rule.description && (
+                        <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-ink/75">
+                          {rule.description}
+                        </p>
+                      )}
                     </div>
                     <form action={toggleRule} title={rule.active ? "Pausar" : "Reanudar"}>
                       <input type="hidden" name="ruleId" value={rule.id} />
@@ -119,6 +124,11 @@ export default async function HostPage() {
                           )}
                           <SpotsChip taken={day.attendances.length} capacity={day.capacity} />
                         </div>
+                        {day.description && (
+                          <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-ink/75">
+                            {day.description}
+                          </p>
+                        )}
                       </div>
                       <form action={cancelDay}>
                         <input type="hidden" name="dayId" value={day.id} />

@@ -41,6 +41,7 @@ type PlaceFormState = ProfileFormState;
 type HostDayFormState = ProfileFormState;
 
 const MAX_PLACE_PHOTOS = 9;
+const MAX_DAY_DESCRIPTION_LENGTH = 280;
 
 // --- Profile ---
 
@@ -180,6 +181,17 @@ function parseTimes(formData: FormData) {
   return { startTime, endTime };
 }
 
+function normalizeDayDescription(raw: FormDataEntryValue | null) {
+  const description = String(raw ?? "").replace(/\r\n?/g, "\n").trim();
+  if (description.length > MAX_DAY_DESCRIPTION_LENGTH) {
+    return {
+      ok: false as const,
+      message: `La descripción tiene que tener menos de ${MAX_DAY_DESCRIPTION_LENGTH} caracteres.`,
+    };
+  }
+  return { ok: true as const, description };
+}
+
 async function assertOwnCircleOrNull(userId: string, raw: FormDataEntryValue | null) {
   const circleId = String(raw ?? "") || null;
   if (circleId) {
@@ -207,6 +219,8 @@ export async function createOneOffDay(
   }
   const { startTime, endTime } = times;
   const capacity = Math.max(1, Number(formData.get("capacity") ?? 4) || 4);
+  const descriptionResult = normalizeDayDescription(formData.get("description"));
+  if (!descriptionResult.ok) return { status: "error", message: descriptionResult.message };
   let circleId;
   try {
     circleId = await assertOwnCircleOrNull(user.id, formData.get("circleId"));
@@ -214,12 +228,20 @@ export async function createOneOffDay(
     return { status: "error", message: "Ese círculo no está disponible." };
   }
 
-  const day = await createDay({ hostId: user.id, date, startTime, endTime, capacity, circleId });
+  const day = await createDay({
+    hostId: user.id,
+    date,
+    startTime,
+    endTime,
+    capacity,
+    description: descriptionResult.description,
+    circleId,
+  });
 
   await sendEmail(
     day.audience.map((a) => a.user.email),
     `${first(user.name)} abrió ${day.place.nickname} — ${formatDay(date)}`,
-    `${user.name} abre una juntada para laburar en ${day.place.nickname} el ${formatDay(date)}, ${startTime}–${endTime}. ${capacity} lugares.\n\nSumate: ${appUrl()}/day/${day.id}`
+    `${user.name} abre una juntada para laburar en ${day.place.nickname} el ${formatDay(date)}, ${startTime}–${endTime}. ${capacity} lugares.${day.description ? `\n\nMood: ${day.description}` : ""}\n\nSumate: ${appUrl()}/day/${day.id}`
   );
   revalidateAll();
 
@@ -336,6 +358,8 @@ export async function createRule(
   }
   const { startTime, endTime } = times;
   const capacity = Math.max(1, Number(formData.get("capacity") ?? 4) || 4);
+  const descriptionResult = normalizeDayDescription(formData.get("description"));
+  if (!descriptionResult.ok) return { status: "error", message: descriptionResult.message };
   let circleId;
   try {
     circleId = await assertOwnCircleOrNull(user.id, formData.get("circleId"));
@@ -346,7 +370,15 @@ export async function createRule(
   if (!place) return { status: "error", message: "Primero creá tu lugar." };
 
   const rule = await prisma.availabilityRule.create({
-    data: { hostId: user.id, weekdays: weekdays.join(","), startTime, endTime, capacity, circleId },
+    data: {
+      hostId: user.id,
+      weekdays: weekdays.join(","),
+      startTime,
+      endTime,
+      capacity,
+      description: descriptionResult.description,
+      circleId,
+    },
   });
   await materializeRules();
 
@@ -360,7 +392,7 @@ export async function createRule(
   await sendEmail(
     audience.map((u) => u.email),
     `${first(user.name)} abre su lugar los ${days}`,
-    `${user.name} abrió ${place.nickname} para laburar todos los ${days}, ${startTime}–${endTime} (${capacity} lugares).\n\nMirá las próximas juntadas: ${appUrl()}/juntadas`
+    `${user.name} abrió ${place.nickname} para laburar todos los ${days}, ${startTime}–${endTime} (${capacity} lugares).${rule.description ? `\n\nMood: ${rule.description}` : ""}\n\nMirá las próximas juntadas: ${appUrl()}/juntadas`
   );
   revalidateAll();
 

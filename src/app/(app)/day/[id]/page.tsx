@@ -22,6 +22,7 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
   const left = day.capacity - day.attendances.length;
   const placePhotos = day.place.photos;
   const primaryPhoto = placePhotos[0] ?? null;
+  const description = day.description.trim();
   const amenities = (day.place.amenities ?? "")
     .split(",")
     .map((x) => x.trim())
@@ -87,6 +88,15 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
             {formatDay(day.date)} · {day.startTime}–{day.endTime}
           </div>
         </div>
+
+        {description && (
+          <section className="mt-4 rounded-[18px] bg-amenity px-4 py-3">
+            <p className="label">Mood de la juntada</p>
+            <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">
+              {description}
+            </p>
+          </section>
+        )}
 
         {/* Who's coming */}
         <div className="mt-6 mb-3 flex items-baseline justify-between">
