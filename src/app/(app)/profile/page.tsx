@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
+import { signOutToHome } from "@/lib/auth-actions";
 import { prisma } from "@/lib/prisma";
 import { ProfileForm } from "./profile-form";
 
@@ -21,10 +22,7 @@ export default async function ProfilePage() {
       <ProfileForm user={user} />
 
       <form
-        action={async () => {
-          "use server";
-          await signOut({ redirectTo: "/signin" });
-        }}
+        action={signOutToHome}
         className="mt-6"
       >
         <button className="btn-ghost">Cerrar sesión</button>

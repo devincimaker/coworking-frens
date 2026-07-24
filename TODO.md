@@ -15,6 +15,9 @@
 - [ ] Improve the home profile created during host setup
   - Make newly created homes feel more complete than a bare place record.
   - Prompt hosts for richer home details such as description, photos, amenities, arrival notes, capacity, and general vibe.
+- [ ] Improve the landing page copy
+  - Better sell the vision and the why behind Coworking Frens, so new visitors quickly understand the emotional and practical value.
+  - Rework the headline, supporting copy, and key sections to make the product feel more compelling without becoming generic marketing.
 
 ## In Progress
 

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
 import { Sidebar, BottomNav, MobileTopBar } from "@/components/nav";
+import { signOutToHome } from "@/lib/auth-actions";
 import { isFeedbackAdminEmail } from "@/lib/admin";
 import { isOnboardingComplete } from "@/lib/profile";
 import { prisma } from "@/lib/prisma";
@@ -26,18 +27,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!isOnboardingComplete(user)) redirect("/onboarding");
   const showFeedbackAdmin = isFeedbackAdminEmail(user.email);
 
-  async function handleSignOut() {
-    "use server";
-    await signOut({ redirectTo: "/" });
-  }
-
   return (
     <>
       <div className="flex min-h-dvh justify-center bg-[radial-gradient(120%_90%_at_50%_-10%,#f1e9dc_0%,#e7dcca_60%,#ddd0bb_100%)]">
         <div className="flex w-full max-w-[1280px] bg-paper shadow-[0_0_90px_rgba(60,40,20,0.14)]">
           <Sidebar
             user={user}
-            signOutAction={handleSignOut}
+            signOutAction={signOutToHome}
             showFeedbackAdmin={showFeedbackAdmin}
           />
           <main className="min-w-0 flex-1 pb-28 md:pb-0">
