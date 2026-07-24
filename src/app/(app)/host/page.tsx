@@ -6,9 +6,10 @@ import { materializeRules } from "@/lib/days";
 import { formatDay, WEEKDAY_LABELS, addDays, todayBA } from "@/lib/tz";
 import { AvatarStack } from "@/components/avatar";
 import { SpotsChip } from "@/components/day-card";
+import { DayOwnerControls } from "@/components/edit-day-form";
 import { HostPlaceForm } from "@/components/host-place-form";
 import { HostDayForms } from "@/components/host-day-forms";
-import { toggleRule, deleteRule, cancelDay } from "@/lib/actions";
+import { toggleRule, deleteRule } from "@/lib/actions";
 
 export default async function HostPage() {
   const session = await auth();
@@ -18,6 +19,7 @@ export default async function HostPage() {
     hostData(session.user.id),
     circlesOf(session.user.id),
   ]);
+  const minDate = todayBA();
 
   return (
     <div>
@@ -90,8 +92,8 @@ export default async function HostPage() {
                 <HostDayForms
                   circles={circles}
                   defaultCapacity={place.defaultCapacity}
-                  minDate={todayBA()}
-                  defaultDate={addDays(todayBA(), 1)}
+                  minDate={minDate}
+                  defaultDate={addDays(minDate, 1)}
                 />
               </div>
             </section>
@@ -103,42 +105,54 @@ export default async function HostPage() {
               ) : (
                 <div className="space-y-2.5">
                   {days.map((day) => (
-                    <div key={day.id} className="panel flex items-center gap-3 p-4">
-                      {day.place.photos[0] && (
-                        <div className="h-14 w-16 shrink-0 overflow-hidden rounded-xl bg-paper">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={day.place.photos[0].url}
-                            alt={`Foto de ${day.place.nickname}`}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <Link href={`/day/${day.id}`} className="text-sm font-semibold text-ink hover:text-clay">
-                          {formatDay(day.date)}{" "}
-                          <span className="font-normal text-faded">
-                            · {day.startTime}–{day.endTime}
-                          </span>
-                        </Link>
-                        <div className="mt-1.5 flex items-center gap-2">
-                          {day.attendances.length > 0 && (
-                            <AvatarStack users={day.attendances.map((att) => att.user)} size={22} />
-                          )}
-                          <SpotsChip taken={day.attendances.length} capacity={day.capacity} />
-                        </div>
-                        {day.description && (
-                          <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-ink/75">
-                            {day.description}
-                          </p>
+                    <div key={day.id} className="panel relative p-4">
+                      <div className="flex items-center gap-3 pr-20">
+                        {day.place.photos[0] && (
+                          <div className="h-14 w-16 shrink-0 overflow-hidden rounded-xl bg-paper">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={day.place.photos[0].url}
+                              alt={`Foto de ${day.place.nickname}`}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
                         )}
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            href={`/day/${day.id}`}
+                            className="text-sm font-semibold text-ink hover:text-clay"
+                          >
+                            {formatDay(day.date)}{" "}
+                            <span className="font-normal text-faded">
+                              · {day.startTime}–{day.endTime}
+                            </span>
+                          </Link>
+                          <div className="mt-1.5 flex items-center gap-2">
+                            {day.attendances.length > 0 && (
+                              <AvatarStack
+                                users={day.attendances.map((att) => att.user)}
+                                size={22}
+                              />
+                            )}
+                            <SpotsChip taken={day.attendances.length} capacity={day.capacity} />
+                          </div>
+                          {day.description && (
+                            <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-ink/75">
+                              {day.description}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <form action={cancelDay}>
-                        <input type="hidden" name="dayId" value={day.id} />
-                        <button className="font-mono text-[11px] text-faded hover:text-clay">
-                          cancelar
-                        </button>
-                      </form>
+                      <DayOwnerControls
+                        day={{
+                          id: day.id,
+                          date: day.date,
+                          startTime: day.startTime,
+                          endTime: day.endTime,
+                          description: day.description,
+                        }}
+                        minDate={minDate}
+                      />
                     </div>
                   ))}
                 </div>

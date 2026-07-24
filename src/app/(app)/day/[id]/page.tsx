@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { dayForUser } from "@/lib/queries";
-import { formatDay } from "@/lib/tz";
+import { formatDay, todayBA } from "@/lib/tz";
 import { accentFor, stripes } from "@/lib/accent";
 import { Avatar } from "@/components/avatar";
-import { cancelDay, removeAttendee, joinDay, leaveDay } from "@/lib/actions";
+import { DayOwnerControls } from "@/components/edit-day-form";
+import { removeAttendee, joinDay, leaveDay } from "@/lib/actions";
 
 type MapsPlace = {
   address: string;
@@ -107,7 +108,11 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
         )}
 
         {/* Host + when */}
-        <div className="panel flex items-center gap-3 p-3">
+        <div
+          className={`panel relative flex flex-wrap items-center gap-3 p-3 ${
+            isHost && !cancelled ? "pr-24" : ""
+          }`}
+        >
           <Avatar name={day.host.name} image={day.host.image} size={40} />
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold text-ink">
@@ -118,6 +123,20 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
           <div className="text-right font-mono text-[12px] text-ink">
             {formatDay(day.date)} · {day.startTime}–{day.endTime}
           </div>
+          {isHost && !cancelled && (
+            <DayOwnerControls
+              day={{
+                id: day.id,
+                date: day.date,
+                startTime: day.startTime,
+                endTime: day.endTime,
+                description: day.description,
+              }}
+              minDate={todayBA()}
+              formClassName="basis-full border-t border-line pt-3"
+              successClassName="basis-full rounded-xl bg-olive/10 px-3 py-2 text-sm font-bold text-olive"
+            />
+          )}
         </div>
 
         {description && (
@@ -251,12 +270,6 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
               </form>
             )}
           </div>
-        )}
-        {isHost && !cancelled && (
-          <form action={cancelDay} className="mt-6">
-            <input type="hidden" name="dayId" value={day.id} />
-            <button className="btn-danger w-full">Cancelar esta juntada</button>
-          </form>
         )}
       </div>
     </div>

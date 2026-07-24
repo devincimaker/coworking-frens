@@ -22,6 +22,9 @@ _No tasks._
 
 ## Done
 
+- [x] Let hosts edit a coworking day
+  - Allow hosts to update a juntada's date, time, and description after creating it.
+  - Keep attendance and visibility behavior clear when an existing juntada changes.
 - [x] Add a simple landing page
   - Create a public page that explains Coworking Frens, shows the basic flow, and links clearly into sign-in.
 - [x] Deploy the app

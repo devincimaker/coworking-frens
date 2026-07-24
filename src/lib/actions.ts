@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { requireOnboardedUser, requireUser } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
@@ -318,6 +319,105 @@ export async function createOneOffDay(
   return {
     status: "success",
     message: `Listo, nueva juntada abierta para ${formatDay(date)}. Ya aparece en tus próximas juntadas.`,
+  };
+}
+
+export async function updateDay(
+  _prevState: HostDayFormState,
+  formData: FormData
+): Promise<HostDayFormState> {
+  const user = await requireOnboardedUser();
+  const today = todayBA();
+  const dayId = String(formData.get("dayId") ?? "");
+  const day = await prisma.coworkDay.findFirst({
+    where: { id: dayId, hostId: user.id, status: "open", date: { gte: today } },
+    include: { attendances: { include: { user: true } }, place: true },
+  });
+  if (!day) return { status: "error", message: "No encontré esa juntada abierta." };
+
+  const date = String(formData.get("date") ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < today) {
+    return { status: "error", message: "Elegí una fecha válida." };
+  }
+
+  let times;
+  try {
+    times = parseTimes(formData);
+  } catch {
+    return { status: "error", message: "Revisá el horario: la hora de cierre va después." };
+  }
+  const { startTime, endTime } = times;
+  const descriptionResult = normalizeDayDescription(formData.get("description"));
+  if (!descriptionResult.ok) return { status: "error", message: descriptionResult.message };
+
+  const dateChanged = date !== day.date;
+  const scheduleChanged = dateChanged || startTime !== day.startTime || endTime !== day.endTime;
+  const updatedData = {
+    date,
+    startTime,
+    endTime,
+    description: descriptionResult.description,
+    reminderSent: scheduleChanged ? false : day.reminderSent,
+  };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      if (dateChanged && day.ruleId) {
+        await tx.coworkDay.update({
+          where: { id: day.id },
+          data: { ...updatedData, ruleId: null },
+        });
+        await tx.coworkDay.create({
+          data: {
+            hostId: day.hostId,
+            placeId: day.placeId,
+            date: day.date,
+            startTime: day.startTime,
+            endTime: day.endTime,
+            capacity: day.capacity,
+            description: day.description,
+            status: "cancelled",
+            ruleId: day.ruleId,
+            reminderSent: true,
+          },
+        });
+        return;
+      }
+
+      await tx.coworkDay.update({
+        where: { id: day.id },
+        data: updatedData,
+      });
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return {
+        status: "error",
+        message: "Ya existe una juntada recurrente para esa fecha.",
+      };
+    }
+    throw err;
+  }
+
+  if (scheduleChanged) {
+    const oldWhen = `${formatDay(day.date)}, ${day.startTime}–${day.endTime}`;
+    const newWhen = `${formatDay(date)}, ${startTime}–${endTime}`;
+
+    await sendEmail(
+      day.attendances.map((a) => a.user.email),
+      `Cambio: ${day.place.nickname} ahora es ${formatDay(date)}`,
+      `${user.name} cambió la juntada en ${day.place.nickname}.\n\nAntes: ${oldWhen}\nAhora: ${newWhen}.\n\nTu lugar sigue reservado. Si no podés ir, bajate desde: ${appUrl()}/day/${day.id}`
+    );
+  }
+
+  revalidateAll();
+  revalidatePath(`/day/${day.id}`);
+
+  return {
+    status: "success",
+    message: scheduleChanged && day.attendances.length > 0
+      ? "Juntada guardada. Avisamos a quienes ya vienen."
+      : "Juntada guardada.",
   };
 }
 
