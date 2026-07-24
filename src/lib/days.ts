@@ -39,6 +39,7 @@ export async function createDay(opts: {
       capacity: opts.capacity,
       description: opts.description ?? "",
       ruleId: opts.ruleId,
+      circleId: opts.circleId,
       audience: { create: audience.map((userId) => ({ userId })) },
     },
     include: { audience: { include: { user: true } }, host: true, place: true },

@@ -7,6 +7,14 @@
 - [ ] Replace free-text amenities with preset options
   - Let hosts choose from a fixed set of amenities instead of typing arbitrary comma-separated text.
   - Store amenities as structured values so feed/day filters and place displays stay consistent.
+- [ ] Let hosts open coworking days to friends of friends
+  - Add an audience option for coworking days that includes direct friends plus friends-of-friends.
+  - Support circle-scoped expansion, where a host can invite a chosen circle and those members' friends.
+  - Keep visibility, attendance, notifications, and friend-request context clear for people who are not direct friends of the host.
+- [ ] Let hosts kick someone from a specific juntada
+  - Allow a host to remove an attendee from one coworking day when they do not want that person attending.
+  - Prevent the kicked attendee from rejoining that same day, even if they are still in the audience.
+  - Notify the kicked attendee clearly and keep the host-side attendance controls explicit.
 - [ ] Add Terms of Service and Privacy Policy
   - Draft and publish ToS and privacy policy pages, then link them from the sign-in flow and app footer/navigation.
 - [ ] Improve the home profile created during host setup
@@ -15,6 +23,9 @@
 - [ ] Improve the landing page copy
   - Better sell the vision and the why behind Coworking Frens, so new visitors quickly understand the emotional and practical value.
   - Rework the headline, supporting copy, and key sections to make the product feel more compelling without becoming generic marketing.
+- [ ] Improve link sharing metadata and brand assets
+  - Add proper Open Graph/Twitter metadata so shared links show a compelling title, description, and preview image.
+  - Create and use an actual Frens logo/favicon instead of the default Next.js triangle-style asset.
 
 ## In Progress
 
@@ -22,6 +33,9 @@ _No tasks._
 
 ## Done
 
+- [x] Let users send friend requests from shared coworking days
+  - When users see other attendees on a coworking day who are not already their friends, let them send a friend request from that context.
+  - Support the request lifecycle clearly, including pending, accepted, declined, and already-friends states.
 - [x] Add an in-app feedback system
   - Give users a simple way to send feedback, bug reports, or feature ideas from inside the app.
   - Store submitted feedback with user, page/context, message, and timestamp so it can be reviewed later.

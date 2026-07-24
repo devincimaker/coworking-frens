@@ -4,9 +4,18 @@ import { auth } from "@/auth";
 import { dayForUser } from "@/lib/queries";
 import { formatDay, todayBA } from "@/lib/tz";
 import { accentFor, stripes } from "@/lib/accent";
+import { friendConnectionStates, type FriendConnectionState } from "@/lib/friends";
+import { userProfilePath } from "@/lib/profile";
 import { Avatar } from "@/components/avatar";
 import { DayOwnerControls } from "@/components/edit-day-form";
-import { removeAttendee, joinDay, leaveDay } from "@/lib/actions";
+import {
+  acceptFriendRequest,
+  declineFriendRequest,
+  removeAttendee,
+  joinDay,
+  leaveDay,
+  sendFriendRequestFromDay,
+} from "@/lib/actions";
 
 type MapsPlace = {
   address: string;
@@ -25,6 +34,81 @@ function googleMapsHref(place: MapsPlace) {
   const params = new URLSearchParams({ api: "1", query });
   if (place.googlePlaceId) params.set("query_place_id", place.googlePlaceId);
   return `https://www.google.com/maps/search/?${params.toString()}`;
+}
+
+function AttendeeFriendControl({
+  dayId,
+  attendeeId,
+  canRequest,
+  state,
+}: {
+  dayId: string;
+  attendeeId: string;
+  canRequest: boolean;
+  state: FriendConnectionState;
+}) {
+  if (!canRequest || state.kind === "self") return null;
+
+  if (state.kind === "friends") {
+    return <span className="amenity bg-olive/10 text-olive">amigo</span>;
+  }
+
+  if (state.kind === "outgoing_pending") {
+    return <span className="amenity">pedido enviado</span>;
+  }
+
+  if (state.kind === "incoming_pending") {
+    return (
+      <div className="flex shrink-0 items-center gap-1.5">
+        <form action={acceptFriendRequest}>
+          <input type="hidden" name="requestId" value={state.requestId} />
+          <button className="rounded-full bg-olive px-2.5 py-1 font-mono text-[11px] font-medium text-white">
+            aceptar
+          </button>
+        </form>
+        <form action={declineFriendRequest}>
+          <input type="hidden" name="requestId" value={state.requestId} />
+          <button className="rounded-full border border-line px-2.5 py-1 font-mono text-[11px] font-medium text-faded hover:text-clay">
+            rechazar
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  if (state.kind === "outgoing_declined") {
+    return (
+      <form action={sendFriendRequestFromDay}>
+        <input type="hidden" name="dayId" value={dayId} />
+        <input type="hidden" name="recipientId" value={attendeeId} />
+        <button className="rounded-full border border-line px-2.5 py-1 font-mono text-[11px] font-medium text-faded hover:border-clay/50 hover:text-clay">
+          pedir otra vez
+        </button>
+      </form>
+    );
+  }
+
+  if (state.kind === "incoming_declined") {
+    return <span className="amenity">rechazado</span>;
+  }
+
+  return (
+    <form action={sendFriendRequestFromDay}>
+      <input type="hidden" name="dayId" value={dayId} />
+      <input type="hidden" name="recipientId" value={attendeeId} />
+      <button className="rounded-full border border-clay/30 px-2.5 py-1 font-mono text-[11px] font-medium text-clay hover:bg-clay hover:text-white">
+        sumar amigo
+      </button>
+    </form>
+  );
+}
+
+function audienceLabel(circleName?: string | null) {
+  return circleName ? `“${circleName}”` : "todos tus amigos";
+}
+
+function profileHref(profileUserId: string, viewerId: string) {
+  return profileUserId === viewerId ? "/profile" : userProfilePath(profileUserId);
 }
 
 export default async function DayPage({ params }: { params: Promise<{ id: string }> }) {
@@ -48,6 +132,15 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
     .split(",")
     .map((x) => x.trim())
     .filter(Boolean);
+  const isAttending = day.attendances.some((att) => att.user.id === userId);
+  const canRequestAttendees = !isHost && isAttending;
+  const selectedCircle = day.circle ?? day.rule?.circle ?? null;
+  const attendeeFriendStates = canRequestAttendees
+    ? await friendConnectionStates(
+        userId,
+        day.attendances.map((att) => att.user.id)
+      )
+    : new Map<string, FriendConnectionState>();
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -113,15 +206,27 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
             isHost && !cancelled ? "pr-24" : ""
           }`}
         >
-          <Avatar name={day.host.name} image={day.host.image} size={40} />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold text-ink">
-              {isHost ? "Vos" : day.host.name}
+          <Link
+            href={profileHref(day.host.id, userId)}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+          >
+            <Avatar name={day.host.name} image={day.host.image} size={40} />
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-ink">
+                {isHost ? "Vos" : day.host.name}
+              </div>
+              <div className="font-mono text-[12px] text-faded">anfitrión</div>
             </div>
-            <div className="font-mono text-[12px] text-faded">anfitrión</div>
-          </div>
+          </Link>
           <div className="text-right font-mono text-[12px] text-ink">
-            {formatDay(day.date)} · {day.startTime}–{day.endTime}
+            <div>
+              {formatDay(day.date)} · {day.startTime}–{day.endTime}
+            </div>
+            {isHost && (
+              <div className="mt-1 text-[11px] text-faded">
+                Para {audienceLabel(selectedCircle?.name)}
+              </div>
+            )}
           </div>
           {isHost && !cancelled && (
             <DayOwnerControls
@@ -160,16 +265,27 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
         ) : (
           <ul className="flex flex-col gap-2">
             {day.attendances.map((att) => (
-              <li key={att.user.id} className="panel flex items-center gap-3 p-2.5">
-                <Avatar name={att.user.name} image={att.user.image} size={32} />
-                <span className="flex-1 text-sm font-medium text-ink">
-                  {att.user.name}
-                  {att.user.id === userId && (
-                    <span className="ml-1 font-mono text-[11px]" style={{ color: a.accent }}>
-                      vos
-                    </span>
-                  )}
-                </span>
+              <li key={att.user.id} className="panel flex flex-wrap items-center gap-3 p-2.5 sm:flex-nowrap">
+                <Link
+                  href={profileHref(att.user.id, userId)}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                >
+                  <Avatar name={att.user.name} image={att.user.image} size={32} />
+                  <div className="min-w-0 text-sm font-medium text-ink">
+                    <span className="block truncate">{att.user.name}</span>
+                    {att.user.id === userId && (
+                      <span className="font-mono text-[11px]" style={{ color: a.accent }}>
+                        vos
+                      </span>
+                    )}
+                  </div>
+                </Link>
+                <AttendeeFriendControl
+                  dayId={day.id}
+                  attendeeId={att.user.id}
+                  canRequest={canRequestAttendees}
+                  state={attendeeFriendStates.get(att.user.id) ?? { kind: "none" }}
+                />
                 {isHost && att.user.id !== userId && (
                   <form action={removeAttendee}>
                     <input type="hidden" name="dayId" value={day.id} />

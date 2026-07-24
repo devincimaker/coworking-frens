@@ -23,18 +23,20 @@ model User {
   inviteToken   String    @unique @default(cuid())
   createdAt     DateTime  @default(now())
 
-  accounts          Account[]
-  sessions          Session[]
-  place             Place?
-  circles           Circle[]
-  circleMemberships CircleMember[]
-  rules             AvailabilityRule[]
-  hostedDays        CoworkDay[]
-  attendances       Attendance[]
-  audienceOf        DayAudience[]
-  friendshipsA      Friendship[]       @relation("FriendA")
-  friendshipsB      Friendship[]       @relation("FriendB")
-  feedback          Feedback[]
+  accounts               Account[]
+  sessions               Session[]
+  place                  Place?
+  circles                Circle[]
+  circleMemberships      CircleMember[]
+  rules                  AvailabilityRule[]
+  hostedDays             CoworkDay[]
+  attendances            Attendance[]
+  audienceOf             DayAudience[]
+  friendshipsA           Friendship[]       @relation("FriendA")
+  friendshipsB           Friendship[]       @relation("FriendB")
+  friendRequestsSent     FriendRequest[]    @relation("FriendRequestRequester")
+  friendRequestsReceived FriendRequest[]    @relation("FriendRequestRecipient")
+  feedback               Feedback[]
 }
 
 // Always stored normalized: aId < bId (lexicographic), enforced in app code.
@@ -49,6 +51,24 @@ model Friendship {
   @@unique([aId, bId])
 }
 
+// Request lifecycle: pending | accepted | declined.
+model FriendRequest {
+  id          String     @id @default(cuid())
+  requesterId String
+  recipientId String
+  coworkDayId String?
+  status      String     @default("pending")
+  createdAt   DateTime   @default(now())
+  respondedAt DateTime?
+  requester   User       @relation("FriendRequestRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  recipient   User       @relation("FriendRequestRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  coworkDay   CoworkDay? @relation(fields: [coworkDayId], references: [id], onDelete: SetNull)
+
+  @@unique([requesterId, recipientId])
+  @@index([recipientId, status])
+  @@index([coworkDayId])
+}
+
 // Private to its owner; members must be friends of the owner (enforced in app code).
 model Circle {
   id        String             @id @default(cuid())
@@ -58,6 +78,7 @@ model Circle {
   owner     User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   members   CircleMember[]
   rules     AvailabilityRule[]
+  days      CoworkDay[]
 
   @@unique([ownerId, name])
 }
@@ -73,8 +94,8 @@ model CircleMember {
 }
 
 model Place {
-  id                  String      @id @default(cuid())
-  hostId              String      @unique
+  id                  String       @id @default(cuid())
+  hostId              String       @unique
   nickname            String
   address             String
   googlePlaceId       String?
@@ -86,10 +107,10 @@ model Place {
   addressRegion       String?
   addressCountry      String?
   addressPostalCode   String?
-  arrivalNotes        String      @default("")
-  amenities           String      @default("") // free-text tags, comma-separated
-  defaultCapacity     Int         @default(4)
-  host                User        @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  arrivalNotes        String       @default("")
+  amenities           String       @default("") // free-text tags, comma-separated
+  defaultCapacity     Int          @default(4)
+  host                User         @relation(fields: [hostId], references: [id], onDelete: Cascade)
   photos              PlacePhoto[]
   days                CoworkDay[]
 }
@@ -135,17 +156,21 @@ model CoworkDay {
   description  String   @default("")
   status       String   @default("open") // open | cancelled
   ruleId       String?
+  circleId     String?
   reminderSent Boolean  @default(false)
   createdAt    DateTime @default(now())
 
-  host        User              @relation(fields: [hostId], references: [id], onDelete: Cascade)
-  place       Place             @relation(fields: [placeId], references: [id], onDelete: Cascade)
-  rule        AvailabilityRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
-  audience    DayAudience[]
-  attendances Attendance[]
+  host           User              @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  place          Place             @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  rule           AvailabilityRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  circle         Circle?           @relation(fields: [circleId], references: [id], onDelete: SetNull)
+  audience       DayAudience[]
+  attendances    Attendance[]
+  friendRequests FriendRequest[]
 
   @@unique([ruleId, date])
   @@index([date])
+  @@index([circleId])
 }
 
 // Audience snapshot, expanded at day-creation time. Host is implicit, not listed.

@@ -11,6 +11,10 @@ import { HostPlaceForm } from "@/components/host-place-form";
 import { HostDayForms } from "@/components/host-day-forms";
 import { toggleRule, deleteRule } from "@/lib/actions";
 
+function audienceLabel(circleName?: string | null) {
+  return circleName ? `“${circleName}”` : "todos mis amigos";
+}
+
 export default async function HostPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
@@ -135,6 +139,9 @@ export default async function HostPage() {
                               />
                             )}
                             <SpotsChip taken={day.attendances.length} capacity={day.capacity} />
+                            <span className="amenity">
+                              Para {audienceLabel(day.circle?.name)}
+                            </span>
                           </div>
                           {day.description && (
                             <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-ink/75">

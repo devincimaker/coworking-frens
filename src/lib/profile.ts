@@ -79,6 +79,10 @@ export function isOnboardingComplete(user: ProfileFields) {
   );
 }
 
+export function userProfilePath(userId: string) {
+  return `/u/${encodeURIComponent(userId)}`;
+}
+
 export function suggestedUsername(email: string, name?: string | null) {
   const source = (name?.trim() || email.split("@")[0] || "fren").toLowerCase();
   const base = source

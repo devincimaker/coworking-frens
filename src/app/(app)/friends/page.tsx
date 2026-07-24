@@ -1,20 +1,34 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { friendsOf } from "@/lib/friends";
+import { FRIEND_REQUEST_DECLINED, friendRequestsForUser, friendsOf } from "@/lib/friends";
+import { userProfilePath } from "@/lib/profile";
 import { circlesOf } from "@/lib/queries";
+import { formatDay } from "@/lib/tz";
 import { appUrl } from "@/lib/url";
 import { Avatar } from "@/components/avatar";
 import { CopyButton } from "@/components/copy-button";
-import { createCircle, deleteCircle, toggleCircleMember } from "@/lib/actions";
+import {
+  acceptFriendRequest,
+  createCircle,
+  declineFriendRequest,
+  deleteCircle,
+  toggleCircleMember,
+} from "@/lib/actions";
 
 export default async function FriendsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) redirect("/signin"); // stale session: the signed-in id no longer exists
-  const [friends, circles] = await Promise.all([friendsOf(user.id), circlesOf(user.id)]);
+  const [friends, circles, requests] = await Promise.all([
+    friendsOf(user.id),
+    circlesOf(user.id),
+    friendRequestsForUser(user.id),
+  ]);
   const inviteUrl = `${appUrl()}/invite/${user.inviteToken}`;
+  const requestCount = requests.incoming.length + requests.outgoing.length;
 
   return (
     <div>
@@ -39,6 +53,86 @@ export default async function FriendsPage() {
             </code>
             <CopyButton text={inviteUrl} />
           </div>
+        </section>
+
+        <section>
+          <p className="eyebrow mb-2.5">Pedidos ({requestCount})</p>
+          {requestCount === 0 ? (
+            <p className="text-sm text-faded">No tenés pedidos.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {requests.incoming.map((request) => (
+                <div
+                  key={request.id}
+                  className="panel flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap"
+                >
+                  <Link
+                    href={userProfilePath(request.requester.id)}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                  >
+                    <Avatar name={request.requester.name} image={request.requester.image} size={38} />
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-medium text-ink">
+                        {request.requester.name}
+                      </p>
+                      <p className="truncate font-mono text-[11px] text-faded">
+                        {request.coworkDay
+                          ? `${request.coworkDay.place.nickname} · ${formatDay(request.coworkDay.date)}`
+                          : `@${request.requester.username ?? request.requester.email.split("@")[0]}`}
+                      </p>
+                    </div>
+                  </Link>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <form action={acceptFriendRequest}>
+                      <input type="hidden" name="requestId" value={request.id} />
+                      <button className="rounded-full bg-olive px-3 py-1.5 text-sm font-semibold text-white">
+                        Aceptar
+                      </button>
+                    </form>
+                    <form action={declineFriendRequest}>
+                      <input type="hidden" name="requestId" value={request.id} />
+                      <button className="rounded-full border border-line px-3 py-1.5 text-sm font-semibold text-faded hover:text-clay">
+                        Rechazar
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              ))}
+
+              {requests.outgoing.map((request) => (
+                <div
+                  key={request.id}
+                  className="panel flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap"
+                >
+                  <Link
+                    href={userProfilePath(request.recipient.id)}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                  >
+                    <Avatar name={request.recipient.name} image={request.recipient.image} size={38} />
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-medium text-ink">
+                        {request.recipient.name}
+                      </p>
+                      <p className="truncate font-mono text-[11px] text-faded">
+                        {request.coworkDay
+                          ? `${request.coworkDay.place.nickname} · ${formatDay(request.coworkDay.date)}`
+                          : `@${request.recipient.username ?? request.recipient.email.split("@")[0]}`}
+                      </p>
+                    </div>
+                  </Link>
+                  <span
+                    className={
+                      request.status === FRIEND_REQUEST_DECLINED
+                        ? "amenity bg-clay/10 text-clay"
+                        : "amenity"
+                    }
+                  >
+                    {request.status === FRIEND_REQUEST_DECLINED ? "rechazado" : "pendiente"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section>
@@ -113,7 +207,11 @@ export default async function FriendsPage() {
           ) : (
             <div className="grid grid-cols-1 gap-x-6 gap-y-0.5 sm:grid-cols-2">
               {friends.map((f) => (
-                <div key={f.id} className="flex items-center gap-3 py-2">
+                <Link
+                  key={f.id}
+                  href={userProfilePath(f.id)}
+                  className="flex items-center gap-3 rounded-xl py-2 outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                >
                   <Avatar name={f.name} image={f.image} size={38} />
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-medium text-ink">{f.name}</p>
@@ -122,7 +220,7 @@ export default async function FriendsPage() {
                     </p>
                     {f.bio && <p className="truncate text-xs text-faded">{f.bio}</p>}
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

@@ -6,7 +6,15 @@ import { Prisma } from "@prisma/client";
 import { requireOnboardedUser, requireUser } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
-import { areFriends, friendsOf, makeFriends } from "@/lib/friends";
+import {
+  acceptFriendRequestForUser,
+  areFriends,
+  declineFriendRequestForUser,
+  friendsOf,
+  makeFriends,
+  removeFriendForUser,
+  requestFriendFromSharedDay,
+} from "@/lib/friends";
 import { createDay, materializeRules } from "@/lib/days";
 import {
   normalizeBio,
@@ -31,6 +39,15 @@ function revalidateAll() {
   revalidatePath("/host");
   revalidatePath("/friends");
   revalidatePath("/profile");
+}
+
+function revalidateFriendRequestSurfaces(dayId?: string, profileUserIds: string[] = []) {
+  revalidateAll();
+  revalidatePath("/day/[id]", "page");
+  if (dayId) revalidatePath(`/day/${dayId}`);
+  for (const userId of profileUserIds) {
+    if (userId) revalidatePath(`/u/${userId}`);
+  }
 }
 
 type ProfileFormState = {
@@ -378,6 +395,7 @@ export async function updateDay(
             description: day.description,
             status: "cancelled",
             ruleId: day.ruleId,
+            circleId: day.circleId,
             reminderSent: true,
           },
         });
@@ -505,6 +523,67 @@ export async function removeAttendee(formData: FormData) {
     );
   }
   revalidateAll();
+}
+
+// --- Friend requests ---
+
+export async function sendFriendRequestFromDay(formData: FormData) {
+  const user = await requireOnboardedUser();
+  const dayId = String(formData.get("dayId") ?? "");
+  const recipientId = String(formData.get("recipientId") ?? "");
+  const profileUserId = String(formData.get("profileUserId") ?? "");
+
+  const result = await requestFriendFromSharedDay({
+    requesterId: user.id,
+    recipientId,
+    coworkDayId: dayId,
+  });
+
+  if (result.outcome === "requested") {
+    const recipient = await prisma.user.findUnique({
+      where: { id: recipientId },
+      select: { email: true },
+    });
+    if (recipient) {
+      await sendEmail(
+        [recipient.email],
+        `${first(user.name)} te mandó pedido de amistad`,
+        `${user.name} te mandó un pedido después de coincidir en ${result.day.place.nickname} el ${formatDay(result.day.date)}, ${result.day.startTime}–${result.day.endTime}.\n\nRespondé desde: ${appUrl()}/friends`
+      );
+    }
+  }
+
+  revalidateFriendRequestSurfaces(dayId, [user.id, recipientId, profileUserId]);
+}
+
+export async function acceptFriendRequest(formData: FormData) {
+  const user = await requireOnboardedUser();
+  const requestId = String(formData.get("requestId") ?? "");
+  const profileUserId = String(formData.get("profileUserId") ?? "");
+  const request = await acceptFriendRequestForUser(requestId, user.id);
+
+  await sendEmail(
+    [request.requester.email],
+    `${first(user.name)} aceptó tu pedido`,
+    `${user.name} aceptó tu pedido de amistad. Ya pueden ver las juntadas del otro.\n\n${appUrl()}/friends`
+  );
+
+  revalidateFriendRequestSurfaces(undefined, [user.id, request.requester.id, profileUserId]);
+}
+
+export async function declineFriendRequest(formData: FormData) {
+  const user = await requireOnboardedUser();
+  const requestId = String(formData.get("requestId") ?? "");
+  const profileUserId = String(formData.get("profileUserId") ?? "");
+  await declineFriendRequestForUser(requestId, user.id);
+  revalidateFriendRequestSurfaces(undefined, [user.id, profileUserId]);
+}
+
+export async function removeFriend(formData: FormData) {
+  const user = await requireOnboardedUser();
+  const friendId = String(formData.get("friendId") ?? "");
+  await removeFriendForUser(user.id, friendId);
+  revalidateFriendRequestSurfaces(undefined, [user.id, friendId]);
 }
 
 // --- Rules ---

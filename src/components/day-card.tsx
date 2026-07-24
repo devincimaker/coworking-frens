@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { accentFor, stripes } from "@/lib/accent";
+import { userProfilePath } from "@/lib/profile";
 import { formatDay } from "@/lib/tz";
 import { joinDay, leaveDay } from "@/lib/actions";
 
@@ -24,6 +25,10 @@ type DayWithRelations = {
     amenities?: string;
     photos?: { id: string; url: string }[];
   };
+  circle?: {
+    id: string;
+    name: string;
+  } | null;
   attendances: { user: Person }[];
 };
 
@@ -48,6 +53,14 @@ function amenityList(amenities?: string) {
     .split(",")
     .map((a) => a.trim())
     .filter(Boolean);
+}
+
+function audienceLabel(circleName?: string | null) {
+  return circleName ? `“${circleName}”` : "todos tus amigos";
+}
+
+function profileHref(profileUserId: string, viewerId: string) {
+  return profileUserId === viewerId ? "/profile" : userProfilePath(profileUserId);
 }
 
 export function SpotsChip({ taken, capacity }: { taken: number; capacity: number }) {
@@ -194,15 +207,20 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
               {description}
             </p>
           )}
-          <div className="mt-4 flex items-center gap-2.5">
+          <Link
+            href={profileHref(day.host.id, userId)}
+            className="mt-4 flex items-center gap-2.5 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+          >
             <Avatar name={day.host.name} image={day.host.image} size={34} />
             <div className="leading-tight">
               <div className="text-sm font-semibold text-ink">
                 {isHost ? "Lo hosteás vos" : `Lo hostea ${firstName(day.host.name)}`}
               </div>
-              <div className="font-mono text-[11px] text-faded">anfitrión</div>
+              <div className="font-mono text-[11px] text-faded">
+                {isHost ? `para ${audienceLabel(day.circle?.name)}` : "anfitrión"}
+              </div>
             </div>
-          </div>
+          </Link>
           {amenities.length > 0 && (
             <div className="mt-3.5 flex flex-wrap gap-1.5">
               {amenities.map((am, i) => (
@@ -232,12 +250,16 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
             ) : (
               <>
                 {shown.map((u) => (
-                  <div key={u.id} className="flex items-center gap-2">
+                  <Link
+                    key={u.id}
+                    href={profileHref(u.id, userId)}
+                    className="flex items-center gap-2 rounded-lg outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                  >
                     <Avatar name={u.name} image={u.image} size={26} />
                     <span className="truncate text-[13px] text-ink">
                       {u.id === userId ? "Vos" : firstName(u.name)}
                     </span>
-                  </div>
+                  </Link>
                 ))}
                 {extra > 0 && (
                   <Link

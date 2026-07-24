@@ -3,6 +3,7 @@ import { todayBA } from "@/lib/tz";
 
 export const dayInclude = {
   host: { select: { id: true, name: true, image: true, email: true } },
+  circle: { select: { id: true, name: true } },
   place: { include: { photos: { orderBy: { sortOrder: "asc" as const } } } },
   attendances: {
     include: { user: { select: { id: true, name: true, image: true } } },
@@ -30,7 +31,10 @@ export async function dayForUser(dayId: string, userId: string) {
       id: dayId,
       OR: [{ hostId: userId }, { audience: { some: { userId } } }],
     },
-    include: { ...dayInclude, rule: true },
+    include: {
+      ...dayInclude,
+      rule: { include: { circle: { select: { id: true, name: true } } } },
+    },
   });
 }
 
