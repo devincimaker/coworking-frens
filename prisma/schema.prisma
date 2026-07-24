@@ -34,6 +34,7 @@ model User {
   audienceOf        DayAudience[]
   friendshipsA      Friendship[]       @relation("FriendA")
   friendshipsB      Friendship[]       @relation("FriendB")
+  feedback          Feedback[]
 }
 
 // Always stored normalized: aId < bId (lexicographic), enforced in app code.
@@ -168,6 +169,21 @@ model Attendance {
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([dayId, userId])
+}
+
+model Feedback {
+  id        String    @id @default(cuid())
+  message   String
+  email     String?
+  page      String?
+  userAgent String?
+  userId    String?
+  createdAt DateTime  @default(now())
+  handledAt DateTime?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
 }
 
 // --- NextAuth ---

@@ -32,12 +32,29 @@ const FriendsIcon = ({ className }: { className?: string }) => (
     <path d="M16 14.6c2.2.1 4 1.5 4 4" />
   </svg>
 );
+const FeedbackIcon = ({ className }: { className?: string }) => (
+  <svg className={className} width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+    <path d="M8 9h8" />
+    <path d="M8 13h5" />
+  </svg>
+);
 
 const ITEMS: NavItem[] = [
   { href: "/juntadas", label: "Juntadas", short: "Juntadas", icon: HomeIcon },
   { href: "/host", label: "Ser anfitrión", short: "Anfitrión", icon: HostIcon },
   { href: "/friends", label: "Amigos", short: "Amigos", icon: FriendsIcon },
 ];
+const FEEDBACK_ITEM: NavItem = {
+  href: "/admin/feedback",
+  label: "Feedback",
+  short: "Feedback",
+  icon: FeedbackIcon,
+};
+
+function navItems(showFeedbackAdmin?: boolean) {
+  return showFeedbackAdmin ? [...ITEMS, FEEDBACK_ITEM] : ITEMS;
+}
 
 function useActive() {
   const pathname = usePathname();
@@ -50,9 +67,11 @@ function useActive() {
 export function Sidebar({
   user,
   signOutAction,
+  showFeedbackAdmin = false,
 }: {
   user: { name?: string | null; username?: string | null; image?: string | null };
   signOutAction: () => Promise<void>;
+  showFeedbackAdmin?: boolean;
 }) {
   const isActive = useActive();
   return (
@@ -64,7 +83,7 @@ export function Sidebar({
         <span className="font-display text-xl font-bold text-ink">Frens</span>
       </Link>
 
-      {ITEMS.map((item) => {
+      {navItems(showFeedbackAdmin).map((item) => {
         const active = isActive(item.href);
         return (
           <Link
@@ -112,11 +131,11 @@ export function Sidebar({
   );
 }
 
-export function BottomNav() {
+export function BottomNav({ showFeedbackAdmin = false }: { showFeedbackAdmin?: boolean }) {
   const isActive = useActive();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-paper/90 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md md:hidden">
-      {ITEMS.map((item) => {
+      {navItems(showFeedbackAdmin).map((item) => {
         const active = isActive(item.href);
         return (
           <Link

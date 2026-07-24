@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Instrument_Sans, DM_Mono } from "next/font/google";
+import { FeedbackWidget } from "@/components/feedback-widget";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -29,7 +30,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="es">
-      <body className={`${fontVars} antialiased`}>{children}</body>
+      <body className={`${fontVars} antialiased`}>
+        {children}
+        <FeedbackWidget />
+      </body>
     </html>
   );
 }
