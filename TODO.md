@@ -7,9 +7,6 @@
 - [ ] Replace free-text amenities with preset options
   - Let hosts choose from a fixed set of amenities instead of typing arbitrary comma-separated text.
   - Store amenities as structured values so feed/day filters and place displays stay consistent.
-- [ ] Add an in-app feedback system
-  - Give users a simple way to send feedback, bug reports, or feature ideas from inside the app.
-  - Store submitted feedback with user, page/context, message, and timestamp so it can be reviewed later.
 - [ ] Add Terms of Service and Privacy Policy
   - Draft and publish ToS and privacy policy pages, then link them from the sign-in flow and app footer/navigation.
 - [ ] Improve the home profile created during host setup
@@ -25,6 +22,9 @@ _No tasks._
 
 ## Done
 
+- [x] Add an in-app feedback system
+  - Give users a simple way to send feedback, bug reports, or feature ideas from inside the app.
+  - Store submitted feedback with user, page/context, message, and timestamp so it can be reviewed later.
 - [x] Let hosts edit a coworking day
   - Allow hosts to update a juntada's date, time, and description after creating it.
   - Keep attendance and visibility behavior clear when an existing juntada changes.
