@@ -39,7 +39,8 @@ The host address picker uses **Google Maps Places Autocomplete** when
 `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set; without it, local development falls back to
 manual address entry.
 `GET /api/dev/seed` creates a sample friend group (Ana, Marco, Lea)
-with two hosted places to click around.
+with two hosted places to click around. In development, open
+`/api/dev/login?email=ana@test.dev&redirectTo=/gente` to sign in as Ana locally.
 
 ## Key paths
 

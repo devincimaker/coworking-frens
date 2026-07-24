@@ -15,6 +15,7 @@ const friendHelpersMock = vi.hoisted(() => ({
   friendsOf: vi.fn(),
   makeFriends: vi.fn(),
   removeFriendForUser: vi.fn(),
+  requestFriendGlobally: vi.fn(),
   requestFriendFromSharedDay: vi.fn(),
 }));
 
@@ -46,6 +47,7 @@ import {
   declineFriendRequest,
   removeFriend,
   sendFriendRequestFromDay,
+  sendFriendRequestFromGente,
 } from "./actions";
 
 function formData(values: Record<string, string>) {
@@ -115,6 +117,34 @@ describe("friend request server actions", () => {
 
     expect(sendEmailMock).not.toHaveBeenCalled();
     expect(revalidatePathMock).toHaveBeenCalledWith("/day/day_1");
+  });
+
+  it("sends a generic request from Gente and notifies the recipient", async () => {
+    friendHelpersMock.requestFriendGlobally.mockResolvedValue({
+      outcome: "requested",
+      recipient: {
+        id: "recipient",
+        name: "Recipient",
+        email: "recipient@example.com",
+      },
+      request: { id: "request_1" },
+    });
+
+    await sendFriendRequestFromGente(
+      formData({ recipientId: "recipient", profileUserId: "recipient" })
+    );
+
+    expect(friendHelpersMock.requestFriendGlobally).toHaveBeenCalledWith({
+      requesterId: "me",
+      recipientId: "recipient",
+    });
+    expect(sendEmailMock).toHaveBeenCalledWith(
+      ["recipient@example.com"],
+      "Ana te mandó pedido de amistad",
+      expect.stringContaining("pedido de amistad en Frens")
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/gente");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/u/recipient");
   });
 
   it("accepts a request, notifies the requester, and revalidates friendship surfaces", async () => {

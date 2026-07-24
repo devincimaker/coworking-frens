@@ -27,6 +27,7 @@ const prismaMock = vi.hoisted(() => ({
     upsert: vi.fn(),
   },
   user: {
+    findFirst: vi.fn(),
     findMany: vi.fn(),
   },
 }));
@@ -44,6 +45,7 @@ import {
   friendConnectionStates,
   friendshipPair,
   removeFriendForUser,
+  requestFriendGlobally,
   requestFriendFromSharedDay,
 } from "./friends";
 
@@ -162,6 +164,42 @@ describe("friend request helpers", () => {
         requesterId: "me",
         recipientId: "other",
         coworkDayId: "day_1",
+        status: FRIEND_REQUEST_PENDING,
+      },
+    });
+  });
+
+  it("creates a generic pending request without day context", async () => {
+    const createdRequest = {
+      id: "request_1",
+      requesterId: "me",
+      recipientId: "other",
+      coworkDayId: null,
+      status: FRIEND_REQUEST_PENDING,
+    };
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: "other",
+      name: "Other",
+      email: "other@example.com",
+    });
+    prismaMock.friendship.findUnique.mockResolvedValue(null);
+    prismaMock.friendRequest.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+    prismaMock.friendRequest.create.mockResolvedValue(createdRequest);
+
+    const result = await requestFriendGlobally({
+      requesterId: "me",
+      recipientId: "other",
+    });
+
+    expect(result).toEqual({
+      outcome: "requested",
+      recipient: { id: "other", name: "Other", email: "other@example.com" },
+      request: createdRequest,
+    });
+    expect(prismaMock.friendRequest.create).toHaveBeenCalledWith({
+      data: {
+        requesterId: "me",
+        recipientId: "other",
         status: FRIEND_REQUEST_PENDING,
       },
     });

@@ -55,6 +55,7 @@ vi.mock("@/lib/actions", () => ({
   declineFriendRequest: vi.fn(),
   removeFriend: vi.fn(),
   sendFriendRequestFromDay: vi.fn(),
+  sendFriendRequestFromGente: vi.fn(),
 }));
 
 import UserProfilePage from "./page";
@@ -131,6 +132,17 @@ describe("UserProfilePage", () => {
     expect(screen.getByText("Pedido pendiente")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Aceptar pedido" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Rechazar" })).toBeInTheDocument();
+  });
+
+  it("lets people send a request without shared-day context", async () => {
+    prismaMock.coworkDay.findFirst.mockResolvedValue(null);
+    prismaMock.coworkDay.findMany.mockResolvedValue([]);
+
+    render(await UserProfilePage({ params: Promise.resolve({ id: "profile" }) }));
+
+    expect(screen.getByText("En Frens")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sumar amigo" })).toBeInTheDocument();
+    expect(screen.queryByText(/contexto:/)).not.toBeInTheDocument();
   });
 
   it("renders the remove friend action for friends", async () => {

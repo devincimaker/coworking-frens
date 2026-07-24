@@ -12,6 +12,7 @@ import {
   declineFriendRequest,
   removeFriend,
   sendFriendRequestFromDay,
+  sendFriendRequestFromGente,
 } from "@/lib/actions";
 
 function relationshipLabel({
@@ -83,7 +84,17 @@ function ProfileRelationshipActions({
     return <span className="amenity">pedido rechazado</span>;
   }
 
-  if (!sharedDay) return null;
+  if (!sharedDay) {
+    return (
+      <form action={sendFriendRequestFromGente}>
+        <input type="hidden" name="recipientId" value={profileId} />
+        <input type="hidden" name="profileUserId" value={profileId} />
+        <button className="btn-primary">
+          {state.kind === "outgoing_declined" ? "Pedir otra vez" : "Sumar amigo"}
+        </button>
+      </form>
+    );
+  }
 
   return (
     <form action={sendFriendRequestFromDay}>
@@ -152,7 +163,6 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
   const title = profile.name ?? profile.username ?? "Perfil";
   const accent = accentFor(profile.id);
   const connectionState = stateMap.get(profile.id) ?? { kind: "none" };
-  const hasProfileAction = isSelf || connectionState.kind !== "none" || Boolean(sharedDay);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -188,15 +198,13 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
             </p>
           )}
 
-          {hasProfileAction && (
-            <div className="mt-5 flex flex-wrap gap-2">
-              <ProfileRelationshipActions
-                profileId={profile.id}
-                state={connectionState}
-                sharedDay={sharedDay}
-              />
-            </div>
-          )}
+          <div className="mt-5 flex flex-wrap gap-2">
+            <ProfileRelationshipActions
+              profileId={profile.id}
+              state={connectionState}
+              sharedDay={sharedDay}
+            />
+          </div>
           {sharedDay && !isSelf && connectionState.kind !== "friends" && (
             <div className="mt-5 flex flex-wrap gap-2">
               <Link href={`/day/${sharedDay.id}`} className="font-mono text-[12px] text-faded hover:text-clay">

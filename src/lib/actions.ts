@@ -13,6 +13,7 @@ import {
   friendsOf,
   makeFriends,
   removeFriendForUser,
+  requestFriendGlobally,
   requestFriendFromSharedDay,
 } from "@/lib/friends";
 import { createDay, materializeRules } from "@/lib/days";
@@ -38,6 +39,7 @@ function revalidateAll() {
   revalidatePath("/juntadas");
   revalidatePath("/host");
   revalidatePath("/friends");
+  revalidatePath("/gente");
   revalidatePath("/profile");
 }
 
@@ -554,6 +556,27 @@ export async function sendFriendRequestFromDay(formData: FormData) {
   }
 
   revalidateFriendRequestSurfaces(dayId, [user.id, recipientId, profileUserId]);
+}
+
+export async function sendFriendRequestFromGente(formData: FormData) {
+  const user = await requireOnboardedUser();
+  const recipientId = String(formData.get("recipientId") ?? "");
+  const profileUserId = String(formData.get("profileUserId") ?? "");
+
+  const result = await requestFriendGlobally({
+    requesterId: user.id,
+    recipientId,
+  });
+
+  if (result.outcome === "requested") {
+    await sendEmail(
+      [result.recipient.email],
+      `${first(user.name)} te mandó pedido de amistad`,
+      `${user.name} te mandó un pedido de amistad en Frens.\n\nRespondé desde: ${appUrl()}/friends`
+    );
+  }
+
+  revalidateFriendRequestSurfaces(undefined, [user.id, recipientId, profileUserId]);
 }
 
 export async function acceptFriendRequest(formData: FormData) {

@@ -15,6 +15,7 @@ const RESERVED_USERNAMES = new Set([
   "api",
   "day",
   "friends",
+  "gente",
   "host",
   "invite",
   "me",

@@ -237,6 +237,67 @@ export async function requestFriendFromSharedDay({
   });
 }
 
+export async function requestFriendGlobally({
+  requesterId,
+  recipientId,
+}: {
+  requesterId: string;
+  recipientId: string;
+}) {
+  if (requesterId === recipientId) throw new Error("Cannot request yourself");
+
+  return prisma.$transaction(async (tx) => {
+    const recipient = await tx.user.findFirst({
+      where: { id: recipientId, onboardedAt: { not: null } },
+      select: { id: true, name: true, email: true },
+    });
+    if (!recipient) throw new Error("User not found");
+
+    const [aId, bId] = friendshipPair(requesterId, recipientId);
+    const friendship = await tx.friendship.findUnique({ where: { aId_bId: { aId, bId } } });
+    if (friendship) return { outcome: "already_friends" as const, recipient, request: null };
+
+    const incoming = await tx.friendRequest.findUnique({
+      where: { requesterId_recipientId: { requesterId: recipientId, recipientId: requesterId } },
+    });
+    if (incoming?.status === FRIEND_REQUEST_PENDING) {
+      return { outcome: "incoming_pending" as const, recipient, request: incoming };
+    }
+    if (incoming?.status === FRIEND_REQUEST_ACCEPTED) {
+      await upsertFriendship(tx, requesterId, recipientId);
+      return { outcome: "already_friends" as const, recipient, request: incoming };
+    }
+
+    const outgoing = await tx.friendRequest.findUnique({
+      where: { requesterId_recipientId: { requesterId, recipientId } },
+    });
+
+    if (outgoing?.status === FRIEND_REQUEST_PENDING) {
+      return { outcome: "pending" as const, recipient, request: outgoing };
+    }
+    if (outgoing?.status === FRIEND_REQUEST_ACCEPTED) {
+      await upsertFriendship(tx, requesterId, recipientId);
+      return { outcome: "already_friends" as const, recipient, request: outgoing };
+    }
+
+    const request = outgoing
+      ? await tx.friendRequest.update({
+          where: { id: outgoing.id },
+          data: {
+            status: FRIEND_REQUEST_PENDING,
+            coworkDayId: null,
+            respondedAt: null,
+            createdAt: new Date(),
+          },
+        })
+      : await tx.friendRequest.create({
+          data: { requesterId, recipientId, status: FRIEND_REQUEST_PENDING },
+        });
+
+    return { outcome: "requested" as const, recipient, request };
+  });
+}
+
 export async function acceptFriendRequestForUser(requestId: string, recipientId: string) {
   return prisma.$transaction(async (tx) => {
     const request = await tx.friendRequest.findFirst({

@@ -15,6 +15,18 @@
   - Allow a host to remove an attendee from one coworking day when they do not want that person attending.
   - Prevent the kicked attendee from rejoining that same day, even if they are still in the audience.
   - Notify the kicked attendee clearly and keep the host-side attendance controls explicit.
+- [ ] Show my profile in read-only mode by default
+  - Make the current user's profile look like a polished profile view instead of always showing edit fields.
+  - Add a clear Edit action that switches the profile into editing mode.
+  - Keep save/cancel behavior explicit so users can leave edit mode without accidental changes.
+- [ ] Ask for confirmation before removing a friend
+  - Show a confirmation step before `Quitar amigo` actually removes the relationship.
+  - Make the consequence clear, including that both users may lose access to each other's friend-only juntadas.
+  - Cover the confirmation flow with tests so accidental one-click removal cannot regress.
+- [ ] Let users cancel outgoing friend requests
+  - Add a clear action for canceling a pending friend request the current user sent.
+  - Remove or mark the pending request so the recipient no longer sees it as actionable.
+  - Update Friends, Gente, and profile surfaces to reflect the canceled state.
 - [ ] Add Terms of Service and Privacy Policy
   - Draft and publish ToS and privacy policy pages, then link them from the sign-in flow and app footer/navigation.
 - [ ] Improve the home profile created during host setup

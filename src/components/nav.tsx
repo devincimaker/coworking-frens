@@ -24,6 +24,12 @@ const HostIcon = ({ className }: { className?: string }) => (
     <path d="M8.5 3v4M15.5 3v4" />
   </svg>
 );
+const SearchIcon = ({ className }: { className?: string }) => (
+  <svg className={className} width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="10.5" cy="10.5" r="5.7" />
+    <path d="m15 15 4.5 4.5" />
+  </svg>
+);
 const FriendsIcon = ({ className }: { className?: string }) => (
   <svg className={className} width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="9" cy="9" r="3.2" />
@@ -42,6 +48,7 @@ const FeedbackIcon = ({ className }: { className?: string }) => (
 
 const ITEMS: NavItem[] = [
   { href: "/juntadas", label: "Juntadas", short: "Juntadas", icon: HomeIcon },
+  { href: "/gente", label: "Gente", short: "Gente", icon: SearchIcon },
   { href: "/host", label: "Ser anfitrión", short: "Anfitrión", icon: HostIcon },
   { href: "/friends", label: "Amigos", short: "Amigos", icon: FriendsIcon },
 ];
