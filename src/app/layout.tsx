@@ -28,9 +28,12 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const fontVars = `${bricolage.variable} ${instrument.variable} ${dmMono.variable}`;
 
+  // The font variables must live on <html>, not <body>: `@theme` resolves
+  // --font-display/body/mono against :root, so on <body> they land too late
+  // and every utility falls back to system-ui.
   return (
-    <html lang="es">
-      <body className={`${fontVars} antialiased`}>
+    <html lang="es" className={fontVars}>
+      <body className="antialiased">
         {children}
         <FeedbackWidget />
       </body>
