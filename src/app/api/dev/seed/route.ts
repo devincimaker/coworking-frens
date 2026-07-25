@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { makeFriends } from "@/lib/friends";
 import { createDay, materializeRules } from "@/lib/days";
+import { TERMS_VERSION } from "@/lib/terms";
 import { addDays, todayBA } from "@/lib/tz";
 
 // Dev-only: seed a realistic friend group to click around with.
@@ -10,12 +11,23 @@ export async function GET() {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
-  const mk = (email: string, name: string, username: string, image: string, bio: string) =>
-    prisma.user.upsert({
+  // Seeded users accept the current Terms so local clicking around is not gated.
+  const mk = (email: string, name: string, username: string, image: string, bio: string) => {
+    const fields = {
+      name,
+      username,
+      image,
+      bio,
+      onboardedAt: new Date(),
+      termsAcceptedAt: new Date(),
+      termsVersion: TERMS_VERSION,
+    };
+    return prisma.user.upsert({
       where: { email },
-      update: { name, username, image, bio, onboardedAt: new Date() },
-      create: { email, name, username, image, bio, onboardedAt: new Date() },
+      update: fields,
+      create: { email, ...fields },
     });
+  };
   const ana = await mk(
     "ana@test.dev",
     "Ana Suarez",

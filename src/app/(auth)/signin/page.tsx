@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { signIn } from "@/auth";
 
 export default async function SignInPage({
@@ -51,6 +52,13 @@ export default async function SignInPage({
           <button className="btn-primary w-full py-3">Mandame un link para entrar</button>
           <p className="pt-1 text-center text-xs text-faded">
             Te llega un link al mail. Tocalo y ya estás adentro — sin contraseñas.
+          </p>
+          <p className="text-center text-xs text-faded">
+            Al entrar aceptás los{" "}
+            <Link href="/terminos" className="font-semibold text-clay underline">
+              Términos y Condiciones
+            </Link>
+            .
           </p>
         </form>
       </div>

@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { ImageUploadField } from "@/components/image-upload-field";
+import { TermsCheckbox } from "@/components/terms-checkbox";
 import { completeOnboarding } from "@/lib/actions";
 
 const initialState = {
@@ -107,6 +108,8 @@ export function OnboardingForm({
           <div className="mt-1 text-right font-mono text-[11px] text-faded">{bio.length}/160</div>
         </div>
       </div>
+
+      <TermsCheckbox id="onboarding-terms" disabled={pending} />
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <p aria-live="polite" className={`min-h-5 text-sm font-bold ${statusClass}`}>

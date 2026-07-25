@@ -4,6 +4,7 @@ import { Sidebar, BottomNav, MobileTopBar } from "@/components/nav";
 import { signOutToHome } from "@/lib/auth-actions";
 import { isFeedbackAdminEmail } from "@/lib/admin";
 import { isOnboardingComplete } from "@/lib/profile";
+import { hasAcceptedCurrentTerms, TERMS_ACCEPT_PATH } from "@/lib/terms";
 import { prisma } from "@/lib/prisma";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -20,11 +21,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       image: true,
       bio: true,
       onboardedAt: true,
+      termsAcceptedAt: true,
+      termsVersion: true,
     },
   });
 
   if (!user) redirect("/signin");
   if (!isOnboardingComplete(user)) redirect("/onboarding");
+  if (!hasAcceptedCurrentTerms(user)) redirect(TERMS_ACCEPT_PATH);
   const showFeedbackAdmin = isFeedbackAdminEmail(user.email);
 
   return (

@@ -176,7 +176,12 @@ export function LandingPage() {
         </section>
 
         <footer className="pt-8 text-center font-mono text-[13px] font-medium text-[oklch(0.5_0.03_60)]">
-          Hecho por humano.inc · 2026
+          <p>Hecho por humano.inc · 2026</p>
+          <p className="mt-2">
+            <Link href="/terminos" className="transition-colors hover:text-ink">
+              Términos y Condiciones
+            </Link>
+          </p>
         </footer>
       </div>
     </div>

@@ -34,3 +34,18 @@ export function formatDay(date: string): string {
 }
 
 export const WEEKDAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+const timestampFormat = new Intl.DateTimeFormat("es-AR", {
+  timeZone: TZ,
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+/** "25/07/2026 17:36" — Argentina-local, for stored timestamps like terms acceptance. */
+export function formatTimestamp(date: Date): string {
+  return timestampFormat.format(date).replace(", ", " ");
+}

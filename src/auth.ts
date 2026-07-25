@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { isOnboardingComplete } from "@/lib/profile";
+import { hasAcceptedCurrentTerms, TERMS_ACCEPT_PATH } from "@/lib/terms";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -50,9 +51,14 @@ export async function requireUser() {
   return user;
 }
 
-/** Like requireUser(), but redirects first-run users into onboarding. */
+/**
+ * Like requireUser(), but redirects first-run users into onboarding and anyone who has
+ * not accepted the current Terms into the acceptance gate. Every server action that
+ * calls this is therefore consent-gated, not just the pages.
+ */
 export async function requireOnboardedUser() {
   const user = await requireUser();
   if (!isOnboardingComplete(user)) redirect("/onboarding");
+  if (!hasAcceptedCurrentTerms(user)) redirect(TERMS_ACCEPT_PATH);
   return user;
 }

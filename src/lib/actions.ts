@@ -24,6 +24,11 @@ import {
   normalizeUsername,
   validateUsername,
 } from "@/lib/profile";
+import {
+  isTermsCheckboxChecked,
+  TERMS_REQUIRED_MESSAGE,
+  TERMS_VERSION,
+} from "@/lib/terms";
 import { formatDay, todayBA } from "@/lib/tz";
 import { appUrl } from "@/lib/url";
 
@@ -106,13 +111,48 @@ export async function completeOnboarding(
   formData: FormData
 ): Promise<ProfileFormState> {
   const user = await requireUser();
+
+  // Consent is part of sign-up, not an afterthought: no profile without acceptance.
+  if (!isTermsCheckboxChecked(formData)) {
+    return { status: "error", message: TERMS_REQUIRED_MESSAGE };
+  }
+
   const result = await validateProfileFields(formData, user.id);
 
   if (!result.ok) return { status: "error", message: result.message };
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { ...result.data, onboardedAt: new Date() },
+    data: {
+      ...result.data,
+      onboardedAt: new Date(),
+      termsAcceptedAt: new Date(),
+      termsVersion: TERMS_VERSION,
+    },
+  });
+
+  revalidateAll();
+  redirect(safeRedirectPath(formData.get("callbackUrl")));
+}
+
+/**
+ * Standalone acceptance, for people who onboarded before the Terms existed and for
+ * everyone again whenever TERMS_VERSION changes. Uses requireUser (not
+ * requireOnboardedUser) so the gate itself never bounces them back to onboarding.
+ */
+export async function acceptTerms(
+  _prevState: ProfileFormState,
+  formData: FormData
+): Promise<ProfileFormState> {
+  const user = await requireUser();
+
+  if (!isTermsCheckboxChecked(formData)) {
+    return { status: "error", message: TERMS_REQUIRED_MESSAGE };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { termsAcceptedAt: new Date(), termsVersion: TERMS_VERSION },
   });
 
   revalidateAll();

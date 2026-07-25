@@ -23,6 +23,11 @@ model User {
   inviteToken   String    @unique @default(cuid())
   createdAt     DateTime  @default(now())
 
+  // Proof of consent: when the user accepted the Terms, and which version. A version
+  // bump in src/lib/terms.ts re-gates everyone until they accept again.
+  termsAcceptedAt DateTime?
+  termsVersion    String?
+
   accounts               Account[]
   sessions               Session[]
   place                  Place?
