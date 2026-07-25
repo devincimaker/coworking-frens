@@ -18,6 +18,51 @@
   --font-display: var(--font-bricolage);
   --font-body: var(--font-instrument);
   --font-mono: var(--font-dm-mono);
+
+  /* ── Design system (Frens DS) ────────────────────────────────────────────
+     Added alongside the legacy app tokens above, under distinct names so the
+     existing screens keep rendering. Unifying the two (clay → coral,
+     paper → sand) is a separate pass. */
+
+  /* Sand — the brand's paper. Everything sits on it. */
+  --color-sand-50: #faf6ef;
+  --color-sand-100: #f7f2e9;
+  --color-sand-200: #f3ece1;
+  --color-sand-300: #efe7da;
+  --color-sand-400: #e7dcca;
+  --color-sheet: #fffdfa;
+
+  /* Ink */
+  --color-ink-900: #211c17;
+  --color-ink-800: #2b2620;
+  --color-ink-700: #332c25;
+  --color-ink-600: oklch(0.45 0.03 60);
+  --color-ink-500: oklch(0.5 0.03 60);
+  --color-ink-400: oklch(0.55 0.03 60);
+  --color-ink-300: oklch(0.62 0.02 60);
+
+  /* Coral — the single brand colour. */
+  --color-coral-700: oklch(0.42 0.16 40);
+  --color-coral-600: oklch(0.5 0.16 40);
+  --color-coral-500: oklch(0.58 0.16 40);
+  --color-coral-200: oklch(0.88 0.06 40);
+  --color-coral-100: oklch(0.94 0.04 40);
+
+  /* Host accents — identity, not decoration. */
+  --color-host-coral: oklch(0.58 0.16 40);
+  --color-host-violet: oklch(0.6 0.16 300);
+  --color-host-blue: oklch(0.55 0.14 250);
+  --color-host-green: oklch(0.5 0.13 150);
+  --color-host-amber: oklch(0.65 0.14 90);
+  --color-host-violet-soft: oklch(0.94 0.04 300);
+  --color-host-blue-soft: oklch(0.94 0.04 250);
+  --color-host-green-soft: oklch(0.94 0.05 150);
+  --color-host-amber-soft: oklch(0.95 0.05 90);
+
+  /* Rules & scrims — always warm-brown alpha, never grey. */
+  --color-rule-soft: rgba(60, 40, 20, 0.08);
+  --color-rule: rgba(60, 40, 20, 0.13);
+  --color-rule-strong: rgba(60, 40, 20, 0.22);
 }
 
 html {
