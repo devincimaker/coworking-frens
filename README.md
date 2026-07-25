@@ -1,8 +1,7 @@
 # Coworking Frens
 
 A private webapp for friends to open their homes as cowork spots. No strangers, no
-payments — the attendee list is the product. See [`SPEC.md`](./SPEC.md) for the full
-product spec and [`DEPLOY.md`](./DEPLOY.md) to ship it.
+payments — the attendee list is the product. See [`DEPLOY.md`](./DEPLOY.md) to ship it.
 
 ## What it does
 
