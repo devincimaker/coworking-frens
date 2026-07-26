@@ -34,15 +34,15 @@ export default async function AcceptTermsPage({
   const isUpdate = Boolean(user.termsAcceptedAt);
 
   return (
-    <div className="pt-8">
-      <div className="mb-5 flex items-center justify-center gap-2.5">
+    <div className="mx-auto flex min-h-[calc(100dvh-5rem)] w-full max-w-md flex-col justify-center py-8">
+      <div className="mb-6 flex items-center justify-center gap-2.5">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-clay font-display text-xl font-bold text-white">
           F
         </span>
         <span className="font-display text-3xl font-bold tracking-tight text-ink">Frens</span>
       </div>
 
-      <div className="mb-5 text-center">
+      <div className="mb-6 text-center">
         <h1 className="font-display text-2xl font-bold tracking-tight text-ink">
           {isUpdate ? "Actualizamos los Términos" : "Un paso y entrás"}
         </h1>
@@ -55,7 +55,7 @@ export default async function AcceptTermsPage({
 
       <AcceptTermsForm callbackUrl={destination} />
 
-      <form action={signOutToHome} className="mt-5 text-center">
+      <form action={signOutToHome} className="mt-6 text-center">
         <button className="text-sm font-semibold text-faded underline">Cerrar sesión</button>
       </form>
     </div>

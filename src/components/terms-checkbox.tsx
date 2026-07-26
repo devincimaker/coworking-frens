@@ -9,14 +9,19 @@ import { TERMS_PATH } from "@/lib/terms";
 export function TermsCheckbox({
   id = "accept-terms",
   disabled = false,
+  className = "mt-5",
 }: {
   id?: string;
   disabled?: boolean;
+  className?: string;
 }) {
   return (
     <label
       htmlFor={id}
-      className="mt-5 flex cursor-pointer items-center gap-2.5 text-[13px] font-medium text-faded"
+      className={[
+        "flex cursor-pointer items-center gap-2.5 text-[13px] font-medium text-faded",
+        className,
+      ].join(" ")}
     >
       <input
         id={id}
