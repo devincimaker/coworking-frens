@@ -83,6 +83,8 @@ Confirmed and built:
 
 - Mutual friendship via personal invite links, plus friend requests — sendable globally
   and from a shared day's attendee list (pending / accepted / declined / already friends).
+- Mutual friends (the intersection only, never anyone's full list) on the `u/[id]` profile
+  and on incoming friend requests. Not yet on Gente or day attendee lists.
 - Private circles (owner-only visibility) used as the audience for a day or a recurring rule.
 - One `Place` per user: nickname, Google Places–backed address, arrival notes, free-text
   amenities, default capacity, and an ordered photo gallery (Vercel Blob).

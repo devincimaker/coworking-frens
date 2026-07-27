@@ -4,6 +4,13 @@ export const FRIEND_REQUEST_PENDING = "pending";
 export const FRIEND_REQUEST_ACCEPTED = "accepted";
 export const FRIEND_REQUEST_DECLINED = "declined";
 
+export type MutualFriend = {
+  id: string;
+  name: string | null;
+  username: string | null;
+  image: string | null;
+};
+
 export type FriendConnectionState =
   | { kind: "self" }
   | { kind: "friends" }
@@ -93,6 +100,63 @@ export async function removeFriendForUser(userId: string, friendId: string) {
 
     return true;
   });
+}
+
+// The intersection of the viewer's friends with each other person's — never that
+// person's own list, which is not the viewer's to see. Batched alongside
+// friendConnectionStates: callers resolve a list of people at once.
+export async function mutualFriends(
+  userId: string,
+  otherIds: string[]
+): Promise<Map<string, MutualFriend[]>> {
+  const peerIds = Array.from(new Set(otherIds)).filter((id) => id !== userId);
+  const mutuals = new Map<string, MutualFriend[]>(peerIds.map((id) => [id, []]));
+  if (peerIds.length === 0) return mutuals;
+
+  const viewerFriendIds = await friendIdsOf(userId);
+  if (viewerFriendIds.length === 0) return mutuals;
+
+  const rows = await prisma.friendship.findMany({
+    where: {
+      OR: [
+        { aId: { in: peerIds }, bId: { in: viewerFriendIds } },
+        { bId: { in: peerIds }, aId: { in: viewerFriendIds } },
+      ],
+    },
+    select: { aId: true, bId: true },
+  });
+
+  const peerIdSet = new Set(peerIds);
+  const viewerFriendIdSet = new Set(viewerFriendIds);
+  const peersByMutual = new Map<string, string[]>();
+  const credit = (mutualId: string, peerId: string) => {
+    const peers = peersByMutual.get(mutualId);
+    if (peers) peers.push(peerId);
+    else peersByMutual.set(mutualId, [peerId]);
+  };
+
+  for (const row of rows) {
+    // A single row satisfies both sides when two of the requested people are
+    // friends with each other and with the viewer, so each side is credited apart.
+    if (peerIdSet.has(row.aId) && viewerFriendIdSet.has(row.bId)) credit(row.bId, row.aId);
+    if (peerIdSet.has(row.bId) && viewerFriendIdSet.has(row.aId)) credit(row.aId, row.bId);
+  }
+  if (peersByMutual.size === 0) return mutuals;
+
+  const people = await prisma.user.findMany({
+    where: { id: { in: Array.from(peersByMutual.keys()) } },
+    orderBy: [{ name: "asc" }, { username: "asc" }],
+    select: { id: true, name: true, username: true, image: true },
+  });
+
+  // Walking the sorted rows once leaves every per-person list sorted too.
+  for (const person of people) {
+    for (const peerId of peersByMutual.get(person.id) ?? []) {
+      mutuals.get(peerId)?.push(person);
+    }
+  }
+
+  return mutuals;
 }
 
 export async function friendConnectionStates(

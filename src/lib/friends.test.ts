@@ -44,6 +44,7 @@ import {
   declineFriendRequestForUser,
   friendConnectionStates,
   friendshipPair,
+  mutualFriends,
   removeFriendForUser,
   requestFriendGlobally,
   requestFriendFromSharedDay,
@@ -121,6 +122,78 @@ describe("friend request helpers", () => {
     expect(states.get("outgoing")).toEqual({ kind: "outgoing_pending", requestId: "outgoing_1" });
     expect(states.get("declined")).toEqual({ kind: "outgoing_declined", requestId: "declined_1" });
     expect(states.get("none")).toEqual({ kind: "none" });
+  });
+
+  it("intersects the viewer's friends with the other person's, and never more", async () => {
+    prismaMock.friendship.findMany
+      .mockResolvedValueOnce([
+        { aId: "me", bId: "meli" },
+        { aId: "lujan", bId: "me" },
+        { aId: "me", bId: "solo" },
+      ])
+      .mockResolvedValueOnce([
+        { aId: "meli", bId: "other" },
+        { aId: "lujan", bId: "other" },
+      ]);
+    prismaMock.user.findMany.mockResolvedValue([
+      { id: "lujan", name: "Luján", username: "lujan", image: null },
+      { id: "meli", name: "Meli", username: "meli", image: null },
+    ]);
+
+    const mutuals = await mutualFriends("me", ["other", "me"]);
+
+    // "solo" is a friend of the viewer only, so it is not in the intersection.
+    expect(mutuals.get("other")?.map((person) => person.id)).toEqual(["lujan", "meli"]);
+    expect(mutuals.has("me")).toBe(false);
+    expect(prismaMock.user.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["meli", "lujan"] } },
+      orderBy: [{ name: "asc" }, { username: "asc" }],
+      select: { id: true, name: true, username: true, image: true },
+    });
+  });
+
+  it("credits both people when two of the requested ids are friends of each other", async () => {
+    prismaMock.friendship.findMany
+      .mockResolvedValueOnce([
+        { aId: "me", bId: "ana" },
+        { aId: "beto", bId: "me" },
+      ])
+      .mockResolvedValueOnce([{ aId: "ana", bId: "beto" }]);
+    prismaMock.user.findMany.mockResolvedValue([
+      { id: "ana", name: "Ana", username: "ana", image: null },
+      { id: "beto", name: "Beto", username: "beto", image: null },
+    ]);
+
+    const mutuals = await mutualFriends("me", ["ana", "beto"]);
+
+    expect(mutuals.get("ana")?.map((person) => person.id)).toEqual(["beto"]);
+    expect(mutuals.get("beto")?.map((person) => person.id)).toEqual(["ana"]);
+  });
+
+  it("never counts the viewer as their own mutual, even when the two are friends", async () => {
+    prismaMock.friendship.findMany
+      .mockResolvedValueOnce([
+        { aId: "me", bId: "other" },
+        { aId: "me", bId: "meli" },
+      ])
+      .mockResolvedValueOnce([{ aId: "meli", bId: "other" }]);
+    prismaMock.user.findMany.mockResolvedValue([
+      { id: "meli", name: "Meli", username: "meli", image: null },
+    ]);
+
+    const mutuals = await mutualFriends("me", ["other"]);
+
+    expect(mutuals.get("other")?.map((person) => person.id)).toEqual(["meli"]);
+  });
+
+  it("returns empty sets without a second query when the viewer has no friends", async () => {
+    prismaMock.friendship.findMany.mockResolvedValueOnce([]);
+
+    const mutuals = await mutualFriends("me", ["other"]);
+
+    expect(mutuals.get("other")).toEqual([]);
+    expect(prismaMock.friendship.findMany).toHaveBeenCalledTimes(1);
+    expect(prismaMock.user.findMany).not.toHaveBeenCalled();
   });
 
   it("rejects friend requests when users do not share the coworking day", async () => {

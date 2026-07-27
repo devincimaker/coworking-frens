@@ -38,6 +38,26 @@
 - [ ] Improve link sharing metadata and brand assets
   - Add proper Open Graph/Twitter metadata so shared links show a compelling title, description, and preview image.
   - Create and use an actual Frens logo/favicon instead of the default Next.js triangle-style asset.
+- [ ] Let attendees add photos to a juntada's album
+  - Give each coworking day a shared album that everyone who claimed a silla can upload to, so the photos of a
+    juntada belong to the people who were actually there rather than to the anfitrión alone.
+  - Gate both uploading and viewing on attendance, not on audience: being allowed to *see* a day is not the same
+    as having been in the room, and these are photos of someone's home and someone's friends.
+  - Decide who can delete what — at minimum the uploader, plus the anfitrión for anything taken in their casa.
+  - Reuse the existing Vercel Blob upload path and the ordered-gallery shape already used for `PlacePhoto`.
+  - **Prerequisite: past juntadas have nowhere to live today.** Every day query filters `date >= todayBA()`
+    (`queries.ts`, `days.ts`), so a finished juntada disappears from every surface even though the row and its
+    `Attendance` records persist. An album needs a page that survives the date passing.
+  - Open question: whether past juntadas get their own surface (a history tab, a per-casa archive, a profile
+    section) or whether the existing day detail page simply stays reachable and changes shape once it is over.
+    The second is far less work and may be enough.
+  - Watch the recurring-day case: rules materialize a new `CoworkDay` per date, so "the album for Thursdays at
+    Meli's" is many albums, not one. Decide whether that is fine or whether albums should ever roll up.
+- [ ] Extend mutual friends to Gente and day attendee lists
+  - `mutualFriends()` is already batched for it; both surfaces resolve many people at once.
+  - Decide the density first: the attendee row is the tightest surface in the app, and the friend-request
+    controls there are gated on `!isHost && isAttending` — mutuals may or may not want that same gate.
+  - Once friends-of-friends audiences land, this is what explains to an attendee why a stranger is in the room.
 
 ## In Progress
 
@@ -45,6 +65,13 @@ _No tasks._
 
 ## Done
 
+- [x] Show mutual friends with someone
+  - Added `mutualFriends()` beside `friendConnectionStates()`: batched, and it returns only the intersection of
+    the viewer's friends with each person's — never anyone's full friend list.
+  - `u/[id]` profile shows faces plus names ("Meli, Luján y 18 más"), expanding in place to the full list once
+    there are more than three. Shown for existing friends too, never for your own profile.
+  - Incoming friend requests on `/friends` carry faces and a count, since that is the moment you decide whether
+    you know the person.
 - [x] Let users send friend requests from shared coworking days
   - When users see other attendees on a coworking day who are not already their friends, let them send a friend request from that context.
   - Support the request lifecycle clearly, including pending, accepted, declined, and already-friends states.

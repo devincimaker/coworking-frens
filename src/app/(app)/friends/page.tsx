@@ -2,13 +2,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { FRIEND_REQUEST_DECLINED, friendRequestsForUser, friendsOf } from "@/lib/friends";
+import {
+  FRIEND_REQUEST_DECLINED,
+  friendRequestsForUser,
+  friendsOf,
+  mutualFriends,
+} from "@/lib/friends";
 import { userProfilePath } from "@/lib/profile";
 import { circlesOf } from "@/lib/queries";
 import { formatDay } from "@/lib/tz";
 import { appUrl } from "@/lib/url";
 import { Avatar } from "@/components/avatar";
 import { CopyButton } from "@/components/copy-button";
+import { MutualFriendsCount } from "@/components/mutual-friends";
 import {
   acceptFriendRequest,
   createCircle,
@@ -27,6 +33,12 @@ export default async function FriendsPage() {
     circlesOf(user.id),
     friendRequestsForUser(user.id),
   ]);
+  // Deciding on an incoming request is exactly when a mutual friend is the answer
+  // to "do I know this person?", so the count rides along with the request row.
+  const incomingMutuals = await mutualFriends(
+    user.id,
+    requests.incoming.map((request) => request.requester.id)
+  );
   const inviteUrl = `${appUrl()}/invite/${user.inviteToken}`;
   const requestCount = requests.incoming.length + requests.outgoing.length;
 
@@ -80,6 +92,9 @@ export default async function FriendsPage() {
                           ? `${request.coworkDay.place.nickname} · ${formatDay(request.coworkDay.date)}`
                           : `@${request.requester.username ?? request.requester.email.split("@")[0]}`}
                       </p>
+                      <MutualFriendsCount
+                        people={incomingMutuals.get(request.requester.id) ?? []}
+                      />
                     </div>
                   </Link>
                   <div className="flex shrink-0 items-center gap-1.5">

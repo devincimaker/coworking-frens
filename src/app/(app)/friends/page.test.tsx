@@ -12,6 +12,7 @@ const friendsMock = vi.hoisted(() => ({
   FRIEND_REQUEST_DECLINED: "declined",
   friendRequestsForUser: vi.fn(),
   friendsOf: vi.fn(),
+  mutualFriends: vi.fn(),
 }));
 const circlesOfMock = vi.hoisted(() => vi.fn());
 
@@ -95,6 +96,7 @@ describe("FriendsPage friend request lifecycle", () => {
       },
     ]);
     circlesOfMock.mockResolvedValue([]);
+    friendsMock.mutualFriends.mockResolvedValue(new Map());
   });
 
   it("renders incoming actions and outgoing pending/declined states", async () => {
@@ -170,5 +172,82 @@ describe("FriendsPage friend request lifecycle", () => {
     expect(screen.getByText("pendiente")).toBeInTheDocument();
     expect(screen.getByText("rechazado")).toBeInTheDocument();
     expect(screen.getByText("Todos (1)")).toBeInTheDocument();
+  });
+
+  it("counts mutual friends on incoming requests only", async () => {
+    friendsMock.friendRequestsForUser.mockResolvedValue({
+      incoming: [
+        {
+          id: "incoming_1",
+          requester: {
+            id: "sender",
+            name: "Sender",
+            username: "sender",
+            email: "sender@example.com",
+            image: null,
+          },
+          recipient: {
+            id: "me",
+            name: "Ana",
+            username: "ana",
+            email: "ana@example.com",
+            image: null,
+          },
+          coworkDay,
+          status: "pending",
+        },
+      ],
+      outgoing: [],
+    });
+    friendsMock.mutualFriends.mockResolvedValue(
+      new Map([
+        [
+          "sender",
+          [
+            { id: "meli", name: "Meli Sosa", username: "meli", image: null },
+            { id: "lujan", name: "Luján Paz", username: "lujan", image: null },
+          ],
+        ],
+      ])
+    );
+
+    render(await FriendsPage());
+
+    expect(friendsMock.mutualFriends).toHaveBeenCalledWith("me", ["sender"]);
+    expect(screen.getByText("2 amigos en común")).toBeInTheDocument();
+  });
+
+  it("says amigo in the singular for a single mutual", async () => {
+    friendsMock.friendRequestsForUser.mockResolvedValue({
+      incoming: [
+        {
+          id: "incoming_1",
+          requester: {
+            id: "sender",
+            name: "Sender",
+            username: "sender",
+            email: "sender@example.com",
+            image: null,
+          },
+          recipient: {
+            id: "me",
+            name: "Ana",
+            username: "ana",
+            email: "ana@example.com",
+            image: null,
+          },
+          coworkDay: null,
+          status: "pending",
+        },
+      ],
+      outgoing: [],
+    });
+    friendsMock.mutualFriends.mockResolvedValue(
+      new Map([["sender", [{ id: "meli", name: "Meli Sosa", username: "meli", image: null }]]])
+    );
+
+    render(await FriendsPage());
+
+    expect(screen.getByText("1 amigo en común")).toBeInTheDocument();
   });
 });

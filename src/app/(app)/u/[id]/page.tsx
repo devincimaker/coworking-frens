@@ -2,8 +2,14 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { Avatar } from "@/components/avatar";
+import { MutualFriendsPanel } from "@/components/mutual-friends";
 import { accentFor, stripes } from "@/lib/accent";
-import { type FriendConnectionState, friendConnectionStates } from "@/lib/friends";
+import {
+  type FriendConnectionState,
+  type MutualFriend,
+  friendConnectionStates,
+  mutualFriends,
+} from "@/lib/friends";
 import { dayInclude } from "@/lib/queries";
 import { prisma } from "@/lib/prisma";
 import { formatDay, todayBA } from "@/lib/tz";
@@ -128,10 +134,13 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
   if (!profile) notFound();
 
   const isSelf = profile.id === viewerId;
-  const [stateMap, sharedDay, visibleHostedDays] = await Promise.all([
+  const [stateMap, mutualMap, sharedDay, visibleHostedDays] = await Promise.all([
     isSelf
       ? Promise.resolve(new Map([[profile.id, { kind: "self" } satisfies FriendConnectionState]]))
       : friendConnectionStates(viewerId, [profile.id]),
+    isSelf
+      ? Promise.resolve(new Map<string, MutualFriend[]>())
+      : mutualFriends(viewerId, [profile.id]),
     isSelf
       ? Promise.resolve(null)
       : prisma.coworkDay.findFirst({
@@ -163,6 +172,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
   const title = profile.name ?? profile.username ?? "Perfil";
   const accent = accentFor(profile.id);
   const connectionState = stateMap.get(profile.id) ?? { kind: "none" };
+  const mutuals = mutualMap.get(profile.id) ?? [];
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -197,6 +207,8 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
               {profile.bio}
             </p>
           )}
+
+          <MutualFriendsPanel people={mutuals} />
 
           <div className="mt-5 flex flex-wrap gap-2">
             <ProfileRelationshipActions

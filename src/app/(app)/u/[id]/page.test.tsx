@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const authMock = vi.hoisted(() => vi.fn());
 const friendConnectionStatesMock = vi.hoisted(() => vi.fn());
+const mutualFriendsMock = vi.hoisted(() => vi.fn());
 const prismaMock = vi.hoisted(() => ({
   coworkDay: {
     findFirst: vi.fn(),
@@ -44,6 +45,7 @@ vi.mock("@/auth", () => ({
 
 vi.mock("@/lib/friends", () => ({
   friendConnectionStates: friendConnectionStatesMock,
+  mutualFriends: mutualFriendsMock,
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -59,6 +61,14 @@ vi.mock("@/lib/actions", () => ({
 }));
 
 import UserProfilePage from "./page";
+
+const MUTUALS = [
+  { id: "meli", name: "Meli Sosa", username: "meli", image: null },
+  { id: "lujan", name: "Luján Paz", username: "lujan", image: null },
+  { id: "tomi", name: "Tomás Ledo", username: "tomi", image: null },
+  { id: "fede", name: "Fede Ruiz", username: "fede", image: null },
+  { id: "caro", name: "Caro Vega", username: "caro", image: null },
+];
 
 describe("UserProfilePage", () => {
   afterEach(() => {
@@ -80,6 +90,7 @@ describe("UserProfilePage", () => {
       createdAt: new Date("2026-07-20T00:00:00Z"),
     });
     friendConnectionStatesMock.mockResolvedValue(new Map([["profile", { kind: "none" }]]));
+    mutualFriendsMock.mockResolvedValue(new Map([["profile", []]]));
     prismaMock.coworkDay.findFirst.mockResolvedValue({
       id: "shared_day",
       date: "2026-07-27",
@@ -148,9 +159,60 @@ describe("UserProfilePage", () => {
     expect(screen.queryByText(/contexto:/)).not.toBeInTheDocument();
   });
 
+  // Everyone is named up to three; past that the line collapses to a count.
+  it.each([
+    [1, "Meli", false],
+    [2, "Meli y Luján", false],
+    [3, "Meli, Luján y Tomás", false],
+    [4, "Meli, Luján y 2 más", true],
+    [5, "Meli, Luján y 3 más", true],
+  ])("summarizes %i mutual friends as %s", async (count, line, collapses) => {
+    mutualFriendsMock.mockResolvedValue(new Map([["profile", MUTUALS.slice(0, count)]]));
+
+    const { container } = render(
+      await UserProfilePage({ params: Promise.resolve({ id: "profile" }) })
+    );
+
+    expect(screen.getByText("Amigos en común")).toBeInTheDocument();
+    expect(screen.getByText(line)).toBeInTheDocument();
+    expect(container.querySelector("details") !== null).toBe(collapses);
+  });
+
+  it("expands a collapsed summary into every mutual friend, each linked", async () => {
+    mutualFriendsMock.mockResolvedValue(new Map([["profile", MUTUALS]]));
+
+    render(await UserProfilePage({ params: Promise.resolve({ id: "profile" }) }));
+
+    expect(screen.getByRole("link", { name: /Caro Vega/ })).toHaveAttribute("href", "/u/caro");
+    for (const person of MUTUALS) {
+      expect(screen.getByText(person.name)).toBeInTheDocument();
+      expect(screen.getByText(`@${person.username}`)).toBeInTheDocument();
+    }
+  });
+
+  it("shows no mutual section when there are none in common", async () => {
+    mutualFriendsMock.mockResolvedValue(new Map([["profile", []]]));
+
+    render(await UserProfilePage({ params: Promise.resolve({ id: "profile" }) }));
+
+    expect(screen.queryByText("Amigos en común")).not.toBeInTheDocument();
+  });
+
+  it("skips mutual friends on the viewer's own profile", async () => {
+    authMock.mockResolvedValue({ user: { id: "profile" } });
+
+    render(await UserProfilePage({ params: Promise.resolve({ id: "profile" }) }));
+
+    expect(mutualFriendsMock).not.toHaveBeenCalled();
+    expect(screen.queryByText("Amigos en común")).not.toBeInTheDocument();
+  });
+
   it("renders the remove friend action for friends", async () => {
     friendConnectionStatesMock.mockResolvedValue(
       new Map([["profile", { kind: "friends" }]])
+    );
+    mutualFriendsMock.mockResolvedValue(
+      new Map([["profile", [{ id: "meli", name: "Meli Sosa", username: "meli", image: null }]]])
     );
 
     render(await UserProfilePage({ params: Promise.resolve({ id: "profile" }) }));
@@ -158,5 +220,7 @@ describe("UserProfilePage", () => {
     expect(screen.getByText("Amigo")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Quitar amigo" })).toBeInTheDocument();
     expect(screen.queryByText(/contexto:/)).not.toBeInTheDocument();
+    // Mutuals stay visible once you are friends, not only while deciding.
+    expect(screen.getByText("Meli")).toBeInTheDocument();
   });
 });
