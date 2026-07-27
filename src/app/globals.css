@@ -100,6 +100,20 @@ body {
   background: oklch(0.9 0.06 45);
 }
 
+/* Motion is feedback here, never decoration — the press on a button, the tint
+   on a hover. Users who ask for less get the end state immediately rather than
+   a broken interface. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Keyboard focus. The UA default is Chrome blue on a warm sand palette; this
    keeps the indicator in the brand's ink and clears 3:1 against every surface
    it lands on, coral included. Pointer focus is untouched. */

@@ -1,8 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
+import { todayBA } from "@/lib/tz";
 
 const APP_SIGNIN = "/signin?callbackUrl=%2Fjuntadas";
 const HOST_SIGNIN = "/signin?callbackUrl=%2Fhost";
+
+// One motion contract for every control on the page. The press is the same one
+// the rest of the app uses (day-card, copy-button, .btn-primary), so the front
+// door doesn't feel different from the product behind it.
+// `scale` — not `transform` — is the property to transition: Tailwind v4 compiles
+// `active:scale-[0.98]` to the standalone `scale` property, which a
+// transition on `transform` does not touch, so the press would snap.
+const CONTROL =
+  "rounded-control font-semibold transition-[background-color,border-color,color,scale] duration-[140ms] ease-[cubic-bezier(.2,.7,.3,1)] active:scale-[0.98]";
+
 // Self-hosted: the previous Unsplash hotlink failed intermittently. Every house
 // on this page is illustrative on purpose — the real ones belong to real friends
 // and stay off a public surface. See PRODUCT.md, "Evidence on Hand".
@@ -124,8 +135,11 @@ function AvatarStack({
   size: number;
   ringColor: string;
 }) {
+  // Decorative: every stack is followed by the same names in text, so letting a
+  // screen reader spell out "C B M S" before "Lu, Cami, Beto y más" only
+  // doubles the announcement.
   return (
-    <div className="flex">
+    <div aria-hidden className="flex">
       {people.map((person, i) => (
         <span
           key={`${person.initial}-${i}`}
@@ -152,21 +166,17 @@ export function LandingPage() {
       <div className="mx-auto max-w-[1140px]">
         {/* NAV */}
         <nav className="flex items-center justify-between py-[22px]">
-          <Link
-            href="/"
-            aria-label="Frens"
-            className="flex items-center gap-2.5 py-2"
-          >
-            <span className="flex h-[30px] w-[30px] items-center justify-center rounded-mark bg-coral-500 font-display text-base font-bold text-sheet">
+          <Link href="/" aria-label="Frens" className="group flex items-center gap-2.5 py-2">
+            <span className="flex h-[30px] w-[30px] items-center justify-center rounded-mark bg-coral-500 font-display text-base font-bold text-sheet transition-colors duration-[140ms] ease-[cubic-bezier(.2,.7,.3,1)] group-hover:bg-coral-600">
               F
             </span>
-            <span className="font-display text-[21px] font-bold tracking-[-.01em] text-ink-800">
+            <span className="font-display text-[21px] font-bold tracking-[-.01em] text-ink-800 transition-colors duration-[140ms] ease-[cubic-bezier(.2,.7,.3,1)] group-hover:text-coral-600">
               Frens
             </span>
           </Link>
           <Link
             href={APP_SIGNIN}
-            className="rounded-control bg-coral-500 px-5 py-3 text-sm font-semibold text-sheet transition-colors duration-[140ms] ease-[cubic-bezier(.2,.7,.3,1)] hover:bg-coral-600"
+            className={`${CONTROL} bg-coral-500 px-5 py-3 text-sm text-sheet hover:bg-coral-600`}
           >
             Entrar
           </Link>
@@ -183,14 +193,12 @@ export function LandingPage() {
                 Cada semana tus amigos abren su casa para laburar juntos. Una con silencio, otra con
                 música, otra con el mate puesto. Vos elegís a cuál ir.
               </p>
-              <div className="mt-[34px] flex flex-wrap items-center gap-5">
-                <Link
-                  href={APP_SIGNIN}
-                  className="rounded-control bg-coral-500 px-7 py-[15px] text-base font-semibold text-sheet shadow-coral transition-colors duration-[140ms] ease-[cubic-bezier(.2,.7,.3,1)] hover:bg-coral-600"
-                >
-                  Entrar a Frens
-                </Link>
-              </div>
+              <Link
+                href={APP_SIGNIN}
+                className={`${CONTROL} mt-[34px] inline-block bg-coral-500 px-7 py-[15px] text-base text-sheet shadow-coral hover:bg-coral-600`}
+              >
+                Entrar a Frens
+              </Link>
             </div>
 
             <div className="relative">
@@ -200,7 +208,6 @@ export function LandingPage() {
                   alt="Un salón lleno de plantas colgantes, con mesas largas de madera y ventanales hasta el techo"
                   fill
                   preload
-                  loading="eager"
                   sizes="(max-width: 800px) 100vw, (max-width: 1240px) 46vw, 560px"
                   className="object-cover object-[78%_44%]"
                 />
@@ -234,9 +241,19 @@ export function LandingPage() {
               Si trabajás remoto, tenés tres opciones malas.
             </h2>
 
-            <div className="mt-[clamp(28px,3.4vw,44px)] grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-px overflow-hidden rounded-panel border border-rule bg-rule">
-              {badOptions.map((option) => (
-                <div key={option.n} className="bg-sand-200 px-6 pt-[26px] pb-[30px]">
+            {/* Explicit column counts, not auto-fit: the hairlines here are the
+                wrapper's bg-rule showing through a 1px gap, so any cell the three
+                cards don't fill paints as a solid slab. Spanning the last card
+                across the 2-column band keeps every row full — and that card
+                carries the longest line, so the wide slot suits it. */}
+            <div className="mt-[clamp(28px,3.4vw,44px)] grid grid-cols-1 gap-px overflow-hidden rounded-panel border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">
+              {badOptions.map((option, i) => (
+                <div
+                  key={option.n}
+                  className={`bg-sand-200 px-6 pt-[26px] pb-[30px] ${
+                    i === badOptions.length - 1 ? "sm:col-span-2 lg:col-span-1" : ""
+                  }`}
+                >
                   <div className="font-mono text-[11px] font-medium tracking-[.06em] text-ink-500">
                     {option.n}
                   </div>
@@ -258,7 +275,10 @@ export function LandingPage() {
                 04
               </div>
               <div className="relative max-w-[620px]">
-                <p className="font-mono text-[11px] font-medium tracking-[.1em] text-sheet">
+                {/* Same mono-caps treatment as <Eyebrow>, so the page's two
+                    kicker styles read as one device. Only the colour differs —
+                    this one sits on coral. */}
+                <p className="font-mono text-[11px] leading-[1.2] font-medium tracking-[.14em] text-sheet">
                   LA QUE FALTA
                 </p>
                 <h3 className="mt-3.5 text-balance font-display text-[clamp(26px,3.6vw,44px)] leading-[1.08] font-bold tracking-[-.024em] text-sheet">
@@ -395,7 +415,7 @@ export function LandingPage() {
             </div>
             <Link
               href={HOST_SIGNIN}
-              className="justify-self-start rounded-control border border-rule-strong bg-sheet px-[26px] py-3.5 text-[15px] font-semibold text-ink-900 transition-colors duration-[140ms] ease-[cubic-bezier(.2,.7,.3,1)] hover:border-rule-hover md:justify-self-end"
+              className={`${CONTROL} justify-self-start border border-rule-strong bg-sheet px-[26px] py-3.5 text-[15px] text-ink-900 hover:border-rule-hover hover:bg-sand-100 md:justify-self-end`}
             >
               Abrir mi casa
             </Link>
@@ -412,7 +432,7 @@ export function LandingPage() {
             </p>
             <Link
               href={APP_SIGNIN}
-              className="inline-block rounded-control bg-sheet px-[34px] py-4 text-base font-semibold text-coral-600 transition-colors duration-[140ms] ease-[cubic-bezier(.2,.7,.3,1)] hover:text-coral-700"
+              className={`${CONTROL} inline-block bg-sheet px-[34px] py-4 text-base text-coral-600 hover:bg-coral-100 hover:text-coral-700`}
             >
               Entrar a Frens
             </Link>
@@ -422,12 +442,14 @@ export function LandingPage() {
         {/* FOOTER */}
         <footer className="py-[clamp(40px,5vw,60px)] text-center">
           <div className="flex flex-wrap items-center justify-center gap-x-4 font-mono text-[13px] font-medium text-ink-500">
-            <span>Hecho por humano.inc · 2026</span>
+            <span>Hecho por humano.inc · {todayBA().slice(0, 4)}</span>
             <Link
               href="/terminos"
-              className="inline-flex min-h-11 items-center text-ink-500 transition-colors duration-[140ms] hover:text-ink-900"
+              className="group inline-flex min-h-11 items-center text-ink-500 transition-colors duration-[140ms] ease-[cubic-bezier(.2,.7,.3,1)] hover:text-ink-900"
             >
-              <span className="border-b border-rule-strong">Términos y Condiciones</span>
+              <span className="border-b border-rule-strong transition-colors duration-[140ms] ease-[cubic-bezier(.2,.7,.3,1)] group-hover:border-ink-900">
+                Términos y Condiciones
+              </span>
             </Link>
           </div>
         </footer>
