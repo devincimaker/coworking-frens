@@ -58,6 +58,32 @@
   - Decide the density first: the attendee row is the tightest surface in the app, and the friend-request
     controls there are gated on `!isHost && isAttending` — mutuals may or may not want that same gate.
   - Once friends-of-friends audiences land, this is what explains to an attendee why a stranger is in the room.
+- [ ] Add WhatsApp notifications as an opt-in extra, for whoever adds a phone number
+  - Everything the product says outside the app goes by email today: a día abierto, a date or time change, a
+    cancellation, someone claiming a silla, someone dropping out, friend requests and acceptances, and the
+    day-before reminder the cron sends. WhatsApp is where this group already talks, so a message there is far
+    likelier to actually be read than one more email.
+  - **Email stays the floor and nothing about it changes.** Adding a phone is optional; a user who never adds
+    one sees no difference at all. That also keeps sign-in out of scope — `auth.ts` sends magic links through
+    the same helper, and those stay on email regardless.
+  - The plumbing is favourable: all of it funnels through a single `sendEmail(to[], subject, text)` in
+    `email.ts`, called from 16 places, all plain text. A `notify()` layer can fan out per user's channels
+    without rewriting a single call site.
+  - **Schema work needed:** `User` has no phone number, and an unverified one means messaging whoever happens to
+    own that line. A verified phone is the prerequisite, and verification is its own flow. The field belongs in
+    profile settings, alongside the read-only-profile work above.
+  - **The real cost is Meta's, not ours.** Business-initiated messages outside a 24-hour reply window need
+    pre-approved templates and are billed per conversation, and every notification listed above is
+    business-initiated. Each one needs its own approved template, and templates live in Meta's console, approved
+    per language — which pulls the rioplatense copy out of the repo and away from review. That runs against the
+    voice being a product commitment, not a localization detail. Opt-in at least bounds the bill to the people
+    who asked for it.
+  - Consent is a WhatsApp requirement, not just good manners. Adding the number *is* the opt-in, so the consent
+    lives in that form rather than in a `termsVersion` bump that would re-gate everyone for a feature most
+    people have not asked for.
+  - Feedback notifications go to `ADMIN_EMAILS`, not to users — those stay email regardless.
+  - Open question: for someone who opted in, does an event send on both channels or only WhatsApp? Both is the
+    simpler build and the noisier inbox; per-event choice is probably over-engineering it for now.
 
 ## In Progress
 
