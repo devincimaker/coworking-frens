@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { Sidebar, BottomNav, MobileTopBar } from "@/components/nav";
+import { FeedbackWidget } from "@/components/feedback-widget";
 import { signOutToHome } from "@/lib/auth-actions";
 import { isFeedbackAdminEmail } from "@/lib/admin";
 import { isOnboardingComplete } from "@/lib/profile";
@@ -47,6 +48,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </div>
       <BottomNav showFeedbackAdmin={showFeedbackAdmin} />
+      <FeedbackWidget />
     </>
   );
 }

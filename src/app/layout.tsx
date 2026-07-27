@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Instrument_Sans, DM_Mono } from "next/font/google";
-import { FeedbackWidget } from "@/components/feedback-widget";
+import { appUrl } from "@/lib/url";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -20,9 +20,30 @@ const dmMono = DM_Mono({
   variable: "--font-dm-mono",
 });
 
+const TITLE = "Coworking Frens";
+const DESCRIPTION =
+  "Cada semana tus amigos abren su casa para laburar juntos. Una con silencio, otra con música, otra con el mate puesto. Vos elegís a cuál ir.";
+
+// metadataBase makes the generated opengraph-image URL absolute, which every
+// scraper requires. appUrl() prefers APP_URL, then the stable Vercel production
+// domain — never the per-deployment URL when a real domain exists.
 export const metadata: Metadata = {
-  title: "Coworking Frens",
-  description: "Laburá en la casa de tus amigos",
+  metadataBase: new URL(appUrl()),
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: TITLE,
+    title: TITLE,
+    description: DESCRIPTION,
+    url: "/",
+    locale: "es_AR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -33,10 +54,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // and every utility falls back to system-ui.
   return (
     <html lang="es" className={fontVars}>
-      <body className="antialiased">
-        {children}
-        <FeedbackWidget />
-      </body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }
