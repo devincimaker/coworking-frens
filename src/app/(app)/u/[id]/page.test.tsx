@@ -63,9 +63,12 @@ import UserProfilePage from "./page";
 describe("UserProfilePage", () => {
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-24T12:00:00-03:00"));
     vi.clearAllMocks();
     authMock.mockResolvedValue({ user: { id: "viewer" } });
     prismaMock.user.findUnique.mockResolvedValue({
