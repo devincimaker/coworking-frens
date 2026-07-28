@@ -184,7 +184,12 @@ export function LandingPage() {
 
         <main>
           {/* HERO */}
-          <header className="grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] items-center gap-[clamp(32px,5vw,64px)] pt-[clamp(48px,6vw,80px)]">
+          {/* min() inside minmax: auto-fit does not shrink a track below its own
+              minimum, so a bare minmax(340px,1fr) stayed 340px wide inside the
+              324px container a 360px phone leaves after padding, and the page
+              scrolled sideways. Capping the minimum at 100% lets the single
+              column collapse. */}
+          <header className="grid grid-cols-[repeat(auto-fit,minmax(min(340px,100%),1fr))] items-center gap-[clamp(32px,5vw,64px)] pt-[clamp(48px,6vw,80px)]">
             <div>
               <h1 className="text-balance font-display text-[clamp(44px,6.4vw,88px)] leading-[0.96] font-bold tracking-[-.035em] text-ink-900">
                 Coworking entre amigos
