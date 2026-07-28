@@ -102,7 +102,6 @@ export function DayComposer({
     initialState
   );
 
-  const isToday = date === today;
   const weekday = weekdayOf(date);
   const alreadyOpen = taken.has(date);
 
@@ -304,31 +303,26 @@ export function DayComposer({
         )}
 
         <div className="mt-3.5 flex flex-wrap items-center justify-between gap-4">
-          <label
-            className={`flex items-center gap-2.5 ${isToday ? "cursor-default" : "cursor-pointer"}`}
-          >
+          <label className="flex cursor-pointer items-center gap-2.5">
             <input
               type="checkbox"
               name="repeat"
               className="peer sr-only"
-              checked={repeat && !isToday}
-              disabled={isToday}
+              checked={repeat}
               onChange={(event) => setRepeat(event.target.checked)}
             />
             <span
               aria-hidden="true"
-              className="relative block h-[27px] w-[46px] shrink-0 rounded-full bg-[oklch(0.85_0.01_70)] transition-colors peer-checked:bg-clay peer-disabled:opacity-45 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-3 peer-focus-visible:outline-ink-900"
+              className="relative block h-[27px] w-[46px] shrink-0 rounded-full bg-[oklch(0.85_0.01_70)] transition-colors peer-checked:bg-clay peer-focus-visible:outline-2 peer-focus-visible:outline-offset-3 peer-focus-visible:outline-ink-900"
             >
               <span
                 className={`absolute top-[3px] h-[21px] w-[21px] rounded-full bg-white shadow-[0_1px_2px_rgba(60,40,20,0.2)] transition-[left] ${
-                  repeat && !isToday ? "left-[22px]" : "left-[3px]"
+                  repeat ? "left-[22px]" : "left-[3px]"
                 }`}
               />
             </span>
-            <span className={`text-sm ${isToday ? "text-faded" : "text-amenity-ink"}`}>
-              {isToday
-                ? "Las que se repiten arrancan mañana"
-                : `Repetir todos los ${WEEKDAY_PLURAL[weekday]} — se abre solo con 3 semanas`}
+            <span className="text-sm text-amenity-ink">
+              Repetir todos los {WEEKDAY_PLURAL[weekday]} — se abre solo con 3 semanas
             </span>
           </label>
 
@@ -337,7 +331,7 @@ export function DayComposer({
               ? "Abriendo…"
               : alreadyOpen
                 ? "Ese día ya está abierto"
-                : repeat && !isToday
+                : repeat
                   ? `Abrir todos los ${WEEKDAY_PLURAL[weekday]}`
                   : `Abrir ${formatDayPhrase(date)}`}
           </button>

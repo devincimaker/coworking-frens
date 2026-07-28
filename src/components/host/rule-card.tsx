@@ -17,6 +17,21 @@ export function RuleCard({ rule }: { rule: HostRuleData }) {
 
   const days = rule.weekdays.map((day) => WEEKDAY_LABELS[day]).join(" y ");
   const audience = rule.circleName ? `“${rule.circleName}”` : "todos";
+  const count = rule.openDayCount;
+
+  // Pausing leaves whatever it already opened on the calendar, so the line has to
+  // say so — otherwise "pausada" reads as if the days went away with it.
+  const status = [
+    rule.active ? "activa" : "pausada",
+    ...(count === 0
+      ? []
+      : rule.active
+        ? [`${count} ${count === 1 ? "día abierto" : "días abiertos"}`]
+        : [
+            `${count === 1 ? "queda 1 abierta" : `quedan ${count} abiertas`}, no se abren más`,
+          ]),
+    audience,
+  ].join(" · ");
 
   if (confirming) {
     return (
@@ -79,11 +94,7 @@ export function RuleCard({ rule }: { rule: HostRuleData }) {
         <div className={`text-sm font-semibold ${rule.active ? "text-ink" : "text-faded"}`}>
           {days} · {rule.startTime}–{rule.endTime}
         </div>
-        <div className="font-mono text-[11px] text-faded">
-          {rule.active ? "activa" : "pausada"}
-          {rule.active && rule.openDayCount > 0 && ` · ${rule.openDayCount} días abiertos`} ·{" "}
-          {audience}
-        </div>
+        <div className="font-mono text-[11px] text-faded">{status}</div>
       </div>
 
       <button

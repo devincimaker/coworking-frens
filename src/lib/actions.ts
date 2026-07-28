@@ -400,13 +400,6 @@ export async function openDay(
   }
   if (formData.get("repeat") !== "on") return createOneOffDay(prevState, formData);
 
-  // Rules materialize from tomorrow on, so a recurring day can't also open today.
-  if (date === todayBA()) {
-    return {
-      status: "error",
-      message: "Las juntadas que se repiten arrancan mañana. Elegí otra fecha, o abrí hoy suelto.",
-    };
-  }
   formData.set("weekdays", String(weekdayOf(date)));
   return createRule(prevState, formData);
 }
@@ -759,7 +752,7 @@ export async function createRule(
   };
 }
 
-/** Deactivating (or deleting) a rule cancels its future instances and notifies attendees. */
+/** Deleting a rule cancels its future instances and notifies attendees. */
 async function cancelFutureInstances(ruleId: string, hostName: string | null) {
   const days = await prisma.coworkDay.findMany({
     where: { ruleId, status: "open", date: { gte: todayBA() } },
@@ -775,17 +768,20 @@ async function cancelFutureInstances(ruleId: string, hostName: string | null) {
   }
 }
 
+/**
+ * Pausing stops the rule from opening *new* days. It deliberately leaves the days
+ * it already opened standing: materializeRules treats any date it has touched as
+ * spent — cancelled included, so a day you called off by hand is never resurrected
+ * — which means a pause that cancelled could never be undone. A switch that reads
+ * "pausar" has to be a switch. Clearing the calendar is per-day, or delete the rule.
+ */
 export async function toggleRule(formData: FormData) {
   const user = await requireOnboardedUser();
   const ruleId = String(formData.get("ruleId"));
   const rule = await prisma.availabilityRule.findFirst({ where: { id: ruleId, hostId: user.id } });
   if (!rule) throw new Error("Rule not found");
   await prisma.availabilityRule.update({ where: { id: rule.id }, data: { active: !rule.active } });
-  if (rule.active) {
-    await cancelFutureInstances(rule.id, user.name);
-  } else {
-    await materializeRules();
-  }
+  if (!rule.active) await materializeRules();
   revalidateAll();
 }
 
