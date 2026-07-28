@@ -28,6 +28,15 @@ export function XIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+/** A chevron folding upward — the card collapsing back into its strip. */
+export function MinimizeIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg aria-hidden="true" width={size} height={size} {...base}>
+      <path d="m17 14-5-5-5 5" />
+    </svg>
+  );
+}
+
 export function CheckIcon({ size = 20 }: { size?: number }) {
   return (
     <svg aria-hidden="true" width={size} height={size} {...base}>

@@ -58,5 +58,4 @@ export type HostRuleData = {
 export type HostCircle = {
   id: string;
   name: string;
-  memberCount: number;
 };

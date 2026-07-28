@@ -69,11 +69,7 @@ export default async function HostPage() {
         circleName: rule.circle?.name ?? null,
         openDayCount: rule._count.days,
       }))}
-      circles={circles.map((circle) => ({
-        id: circle.id,
-        name: circle.name,
-        memberCount: circle.members.length,
-      }))}
+      circles={circles.map((circle) => ({ id: circle.id, name: circle.name }))}
     />
   );
 }

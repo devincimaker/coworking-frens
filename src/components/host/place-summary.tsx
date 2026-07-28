@@ -94,17 +94,12 @@ export function PlaceSummary({
         )}
       </div>
 
+      {/* One button: "Sumar fotos" opened this same editor, and the coral belongs
+          to "Abrir un día" — the house is settled context, not the page's job. */}
       <div className="flex shrink-0 flex-col items-end gap-1.5">
-        <div className="flex gap-2">
-          {!hasPhotos && (
-            <button type="button" className="btn-primary" onClick={onEdit}>
-              Sumar fotos
-            </button>
-          )}
-          <button type="button" className="btn-ghost" onClick={onEdit}>
-            Editar mi casa
-          </button>
-        </div>
+        <button type="button" className="btn-ghost" onClick={onEdit}>
+          Editar mi casa
+        </button>
         <span className="font-mono text-[11px] text-faded">
           la dirección la ven los que se suman
         </span>
