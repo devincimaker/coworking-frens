@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { friendIdsOf } from "@/lib/friends";
-import { addDays, todayBA, weekdayOf } from "@/lib/tz";
+import { addDays, currentTimeBA, todayBA, weekdayOf } from "@/lib/tz";
 
 export const MATERIALIZE_HORIZON_DAYS = 21; // 3 weeks, per spec
 
-/** Audience = one circle's members, or all current friends (circleId null). Snapshot semantics. */
+/** Audience rows are materialized for fast visibility checks, then kept in sync while days are open. */
 async function resolveAudience(hostId: string, circleId: string | null): Promise<string[]> {
   if (circleId) {
     const members = await prisma.circleMember.findMany({
@@ -52,15 +52,35 @@ export async function materializeRules() {
     where: { active: true, host: { place: { isNot: null } } },
   });
   const today = todayBA();
+  const nowTime = currentTimeBA();
   for (const rule of rules) {
     const weekdays = new Set(rule.weekdays.split(",").map(Number));
+    const audience = await resolveAudience(rule.hostId, rule.circleId);
     const existing = await prisma.coworkDay.findMany({
       where: { ruleId: rule.id, date: { gte: today } },
-      select: { date: true },
+      select: {
+        id: true,
+        date: true,
+        status: true,
+        audience: { select: { userId: true } },
+      },
     });
     const have = new Set(existing.map((d) => d.date));
-    for (let i = 1; i <= MATERIALIZE_HORIZON_DAYS; i++) {
+
+    for (const day of existing) {
+      if (day.status !== "open") continue;
+      const currentAudience = new Set(day.audience.map((a) => a.userId));
+      const missing = audience.filter((userId) => !currentAudience.has(userId));
+      if (missing.length === 0) continue;
+      await prisma.dayAudience.createMany({
+        data: missing.map((userId) => ({ dayId: day.id, userId })),
+        skipDuplicates: true,
+      });
+    }
+
+    for (let i = 0; i <= MATERIALIZE_HORIZON_DAYS; i++) {
       const date = addDays(today, i);
+      if (date === today && rule.endTime <= nowTime) continue;
       if (!weekdays.has(weekdayOf(date)) || have.has(date)) continue;
       await createDay({
         hostId: rule.hostId,
@@ -72,6 +92,7 @@ export async function materializeRules() {
         circleId: rule.circleId,
         ruleId: rule.id,
       });
+      have.add(date);
     }
   }
 }

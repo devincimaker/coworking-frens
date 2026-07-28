@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const prismaMock = vi.hoisted(() => ({
   $transaction: vi.fn(),
@@ -9,7 +9,12 @@ const prismaMock = vi.hoisted(() => ({
     deleteMany: vi.fn(),
   },
   coworkDay: {
+    findMany: vi.fn(),
     findUnique: vi.fn(),
+  },
+  dayAudience: {
+    createMany: vi.fn(),
+    deleteMany: vi.fn(),
   },
   friendRequest: {
     create: vi.fn(),
@@ -44,6 +49,7 @@ import {
   declineFriendRequestForUser,
   friendConnectionStates,
   friendshipPair,
+  makeFriends,
   mutualFriends,
   removeFriendForUser,
   requestFriendGlobally,
@@ -58,12 +64,19 @@ const sharedDay = {
   place: { nickname: "Casa Thames" },
 };
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("friend request helpers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prismaMock.$transaction.mockImplementation(async (work) =>
       typeof work === "function" ? work(prismaMock) : Promise.all(work)
     );
+    prismaMock.coworkDay.findMany.mockResolvedValue([]);
+    prismaMock.dayAudience.createMany.mockResolvedValue({ count: 0 });
+    prismaMock.dayAudience.deleteMany.mockResolvedValue({ count: 0 });
   });
 
   it("normalizes friendship pairs lexicographically", () => {
@@ -93,6 +106,43 @@ describe("friend request helpers", () => {
           { requesterId: "friend", recipientId: "me" },
         ],
       },
+    });
+  });
+
+  it("adds each new friend to the other's open all-friends day audiences", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-28T15:00:00Z"));
+    prismaMock.coworkDay.findMany
+      .mockResolvedValueOnce([{ id: "my_today_day" }])
+      .mockResolvedValueOnce([{ id: "their_today_day" }]);
+
+    await makeFriends("me", "friend");
+
+    expect(prismaMock.coworkDay.findMany).toHaveBeenNthCalledWith(1, {
+      where: {
+        hostId: "me",
+        circleId: null,
+        status: "open",
+        date: { gte: "2026-07-28" },
+      },
+      select: { id: true },
+    });
+    expect(prismaMock.coworkDay.findMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        hostId: "friend",
+        circleId: null,
+        status: "open",
+        date: { gte: "2026-07-28" },
+      },
+      select: { id: true },
+    });
+    expect(prismaMock.dayAudience.createMany).toHaveBeenNthCalledWith(1, {
+      data: [{ dayId: "my_today_day", userId: "friend" }],
+      skipDuplicates: true,
+    });
+    expect(prismaMock.dayAudience.createMany).toHaveBeenNthCalledWith(2, {
+      data: [{ dayId: "their_today_day", userId: "me" }],
+      skipDuplicates: true,
     });
   });
 
