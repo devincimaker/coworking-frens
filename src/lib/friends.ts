@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { todayBA } from "@/lib/tz";
 
 export const FRIEND_REQUEST_PENDING = "pending";
 export const FRIEND_REQUEST_ACCEPTED = "accepted";
@@ -20,7 +21,8 @@ export type FriendConnectionState =
   | { kind: "outgoing_declined"; requestId: string }
   | { kind: "none" };
 
-type FriendStore = Pick<typeof prisma, "friendship" | "friendRequest">;
+type OpenAudienceStore = Pick<typeof prisma, "coworkDay" | "dayAudience">;
+type FriendStore = Pick<typeof prisma, "friendship" | "friendRequest"> & OpenAudienceStore;
 
 export function friendshipPair(u1: string, u2: string): [string, string] {
   return u1 < u2 ? [u1, u2] : [u2, u1];
@@ -42,6 +44,54 @@ async function upsertFriendship(db: FriendStore, u1: string, u2: string) {
       status: { not: FRIEND_REQUEST_ACCEPTED },
     },
     data: { status: FRIEND_REQUEST_ACCEPTED, respondedAt: new Date() },
+  });
+  await addOpenAllFriendsAudience(db, u1, u2);
+  await addOpenAllFriendsAudience(db, u2, u1);
+}
+
+async function addOpenAllFriendsAudience(
+  db: OpenAudienceStore,
+  hostId: string,
+  friendId: string
+) {
+  const days = await db.coworkDay.findMany({
+    where: {
+      hostId,
+      circleId: null,
+      status: "open",
+      date: { gte: todayBA() },
+    },
+    select: { id: true },
+  });
+  if (days.length === 0) return;
+
+  await db.dayAudience.createMany({
+    data: days.map((day) => ({ dayId: day.id, userId: friendId })),
+    skipDuplicates: true,
+  });
+}
+
+async function removeOpenAllFriendsAudience(
+  db: OpenAudienceStore,
+  hostId: string,
+  friendId: string
+) {
+  const days = await db.coworkDay.findMany({
+    where: {
+      hostId,
+      circleId: null,
+      status: "open",
+      date: { gte: todayBA() },
+    },
+    select: { id: true },
+  });
+  if (days.length === 0) return;
+
+  await db.dayAudience.deleteMany({
+    where: {
+      dayId: { in: days.map((day) => day.id) },
+      userId: friendId,
+    },
   });
 }
 
@@ -97,6 +147,8 @@ export async function removeFriendForUser(userId: string, friendId: string) {
         ],
       },
     });
+    await removeOpenAllFriendsAudience(tx, userId, friendId);
+    await removeOpenAllFriendsAudience(tx, friendId, userId);
 
     return true;
   });

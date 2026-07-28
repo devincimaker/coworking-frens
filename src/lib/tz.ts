@@ -9,8 +9,20 @@ const ymd = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
+const hm = new Intl.DateTimeFormat("en-GB", {
+  timeZone: TZ,
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  hourCycle: "h23",
+});
+
 export function todayBA(): string {
   return ymd.format(new Date());
+}
+
+export function currentTimeBA(): string {
+  return hm.format(new Date());
 }
 
 export function addDays(date: string, n: number): string {
