@@ -23,6 +23,19 @@
   - Show a confirmation step before `Quitar amigo` actually removes the relationship.
   - Make the consequence clear, including that both users may lose access to each other's friend-only juntadas.
   - Cover the confirmation flow with tests so accidental one-click removal cannot regress.
+- [ ] Let pausing a rule offer to clear the days it already opened
+  - Pausing now only stops the rule from opening *new* days. Whatever it already put on the calendar stays, and
+    the card says so: "pausada · quedan 7 abiertas, no se abren más". That is the right default — a pause that
+    cancelled could never be undone, because `materializeRules` treats every date it has touched as spent,
+    cancelled ones included, so that a day called off by hand is never resurrected.
+  - What it does not serve is "me voy de viaje un mes": you pause, and up to three weeks of days are still
+    standing. The only way out today is cancelling them one by one from the list.
+  - Shape it like the delete-rule confirmation already in `RuleCard`: pausing while days are open asks
+    "Pausás los martes y jueves. Tenés 6 días abiertos." → `[Dejarlos abiertos]` / `[Cancelarlos también]`.
+  - The second branch reuses `cancelFutureInstances`, which mails every attendee, so the confirm has to name who
+    gets written to — the per-day cancel already does exactly that and reads well.
+  - Decide the asymmetry first: that branch is irreversible while the plain pause is not. A switch that can
+    quietly do something a switch cannot undo may be the wrong home for it.
 - [ ] Let users cancel outgoing friend requests
   - Add a clear action for canceling a pending friend request the current user sent.
   - Remove or mark the pending request so the recipient no longer sees it as actionable.
