@@ -25,10 +25,11 @@ const pillBase =
 /** The strip the composer folds into while the house form is open above it. */
 export function DayComposerPlaceholder({ openDayCount }: { openDayCount: number }) {
   return (
-    <div className="mb-7 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-[22px] border border-line bg-surface/60 px-5 py-4 opacity-55">
+    <div className="mb-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-[22px] border border-line bg-surface/60 px-5 py-4 opacity-55">
       <span className="font-display text-xl font-bold text-ink">Abrir un día</span>
       <span className="font-mono text-[12px] text-faded">
-        {openDayCount > 0 && `${openDayCount} ${openDayCount === 1 ? "día ya abierto" : "días ya abiertos"} · `}
+        {openDayCount > 0 &&
+          `${openDayCount} ${openDayCount === 1 ? "día ya abierto" : "días ya abiertos"} · `}
         terminá de editar y seguí acá
       </span>
     </div>
@@ -61,6 +62,9 @@ export function DayComposer({
   const nextFree =
     dateWindow.slice(1).find((option) => !taken.has(option)) ?? addDays(today, PILL_DAYS);
 
+  // The card is the card — it just isn't always on screen. Closed, this is one
+  // button; open, it is the whole composer, unchanged.
+  const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState(nextFree);
   const [capacity, setCapacity] = useState(defaultCapacity);
   const [repeat, setRepeat] = useState(false);
@@ -73,14 +77,20 @@ export function DayComposer({
   // and the button says plainly that it's already open.
   const date = dateWindow.includes(picked) && taken.has(picked) ? nextFree : picked;
 
+  function close() {
+    formRef.current?.reset();
+    setOpen(false);
+    setPicked(nextFree);
+    setCapacity(defaultCapacity);
+    setRepeat(false);
+    setCustomOpen(false);
+  }
+
   const [state, formAction, pending] = useActionState(
     async (previous: HostFormState, formData: FormData) => {
       const result = await openDay(previous, formData);
-      if (result.status === "success") {
-        formRef.current?.reset();
-        setCapacity(defaultCapacity);
-        setRepeat(false);
-      }
+      // The day is now in the list below; the composer folds away again.
+      if (result.status === "success") close();
       return result;
     },
     initialState
@@ -89,14 +99,55 @@ export function DayComposer({
   const isToday = date === today;
   const weekday = weekdayOf(date);
   const alreadyOpen = taken.has(date);
-  const setDate = setPicked;
 
   const pillDates = dateWindow.includes(date) ? dateWindow : [...dateWindow, date].sort();
+
+  if (!open) {
+    return (
+      <div className="mb-8">
+        <div className="card flex flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-[22px]">
+          <div className="min-w-0">
+            <h2 className="font-display text-[22px] font-bold text-ink">¿Armás una juntada?</h2>
+            <p className="mt-0.5 text-[15px] text-faded">
+              Fecha, horario, cuántas sillas y el mood.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn-primary shrink-0 px-5 py-3 text-[15px]"
+            onClick={() => setOpen(true)}
+          >
+            <span aria-hidden="true" className="text-lg leading-none">
+              +
+            </span>
+            Abrir un día
+          </button>
+        </div>
+
+        {/* A day that just opened still owes you a word, even with the card closed. */}
+        {state.message && (
+          <p
+            aria-live="polite"
+            className={`mt-3 rounded-xl px-3 py-2 text-sm font-bold ${
+              state.status === "success" ? "bg-olive/10 text-olive" : "bg-clay/10 text-clay"
+            }`}
+          >
+            {state.message}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <form
       ref={formRef}
       action={formAction}
+      // The open card carries no close button by design. Escape is the way back
+      // out for anyone who opened it by accident — invisible, costs nothing.
+      onKeyDown={(event) => {
+        if (event.key === "Escape") close();
+      }}
       className="card mb-8 border-coral-200 shadow-card p-5 sm:p-[22px]"
     >
       <input type="hidden" name="date" value={date} />
@@ -130,7 +181,7 @@ export function DayComposer({
                   checked={checked}
                   disabled={isOpen}
                   onChange={() => {
-                    setDate(option);
+                    setPicked(option);
                     setCustomOpen(false);
                   }}
                 />
@@ -154,7 +205,7 @@ export function DayComposer({
               autoFocus
               min={today}
               value={date}
-              onChange={(event) => event.target.value && setDate(event.target.value)}
+              onChange={(event) => event.target.value && setPicked(event.target.value)}
               className="rounded-full border border-clay bg-paper px-3.5 py-2 text-sm font-semibold text-ink outline-none"
             />
           ) : (
