@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { friendIdsOf } from "@/lib/friends";
 import { todayBA } from "@/lib/tz";
 
 export const dayInclude = {
@@ -38,24 +39,35 @@ export async function dayForUser(dayId: string, userId: string) {
   });
 }
 
+/**
+ * Everything /host renders in one round trip: the place, the recurring rules
+ * (with how many days each one currently holds open), the open days, how many
+ * friends would hear about a new day, and the invite link shown when that's zero.
+ */
 export async function hostData(userId: string) {
-  const [place, rules, days] = await Promise.all([
+  const today = todayBA();
+  const [place, rules, days, friendIds, user] = await Promise.all([
     prisma.place.findUnique({
       where: { hostId: userId },
       include: { photos: { orderBy: { sortOrder: "asc" } } },
     }),
     prisma.availabilityRule.findMany({
       where: { hostId: userId },
-      include: { circle: { select: { id: true, name: true } } },
+      include: {
+        circle: { select: { id: true, name: true } },
+        _count: { select: { days: { where: { status: "open", date: { gte: today } } } } },
+      },
       orderBy: { createdAt: "asc" },
     }),
     prisma.coworkDay.findMany({
-      where: { hostId: userId, date: { gte: todayBA() }, status: "open" },
+      where: { hostId: userId, date: { gte: today }, status: "open" },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
       include: dayInclude,
     }),
+    friendIdsOf(userId),
+    prisma.user.findUnique({ where: { id: userId }, select: { inviteToken: true } }),
   ]);
-  return { place, rules, days };
+  return { place, rules, days, friendCount: friendIds.length, inviteToken: user?.inviteToken ?? "" };
 }
 
 export async function circlesOf(userId: string) {

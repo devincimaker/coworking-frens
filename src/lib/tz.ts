@@ -47,6 +47,57 @@ export function formatDay(date: string): string {
 
 export const WEEKDAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
+/** "jueves" — for sentences like "Abrir el jueves 30". */
+export const WEEKDAY_FULL = [
+  "domingo",
+  "lunes",
+  "martes",
+  "miércoles",
+  "jueves",
+  "viernes",
+  "sábado",
+];
+
+/** "jueves" / "sábados" — for "Repetir todos los jueves". */
+export const WEEKDAY_PLURAL = [
+  "domingos",
+  "lunes",
+  "martes",
+  "miércoles",
+  "jueves",
+  "viernes",
+  "sábados",
+];
+
+/** "Hoy" / "Mañana" / "Mié 29" — the compact label the date pills wear. */
+export function formatDayShort(date: string): string {
+  const today = todayBA();
+  if (date === today) return "Hoy";
+  if (date === addDays(today, 1)) return "Mañana";
+  const [, , d] = date.split("-").map(Number);
+  return `${WEEKDAY_LABELS[weekdayOf(date)]} ${d}`;
+}
+
+/** "hoy" / "mañana" / "el jueves 30" — reads inside a button label. */
+export function formatDayPhrase(date: string): string {
+  const today = todayBA();
+  if (date === today) return "hoy";
+  if (date === addDays(today, 1)) return "mañana";
+  const [, , d] = date.split("-").map(Number);
+  return `el ${WEEKDAY_FULL[weekdayOf(date)]} ${d}`;
+}
+
+/** "se sumó hoy" / "se sumó ayer" / "se sumó el jue" / "se sumó el 3 jul". */
+export function joinedPhrase(joinedAt: Date): string {
+  const date = ymd.format(joinedAt);
+  const today = todayBA();
+  if (date >= today) return "se sumó hoy";
+  if (date === addDays(today, -1)) return "se sumó ayer";
+  const [, m, d] = date.split("-").map(Number);
+  if (date >= addDays(today, -6)) return `se sumó el ${WEEKDAY_LABELS[weekdayOf(date)].toLowerCase()}`;
+  return `se sumó el ${d} ${MONTHS[m - 1]}`;
+}
+
 const timestampFormat = new Intl.DateTimeFormat("es-AR", {
   timeZone: TZ,
   day: "2-digit",
