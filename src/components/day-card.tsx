@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { accentFor, stripes } from "@/lib/accent";
+import { amenityList, areaLabel } from "@/lib/place";
 import { userProfilePath } from "@/lib/profile";
 import { formatDay } from "@/lib/tz";
 import { joinDay, leaveDay } from "@/lib/actions";
@@ -34,27 +35,6 @@ type DayWithRelations = {
 
 const firstName = (name: string | null | undefined) => name?.split(" ")[0] ?? "alguien";
 
-/** Fallback for older manually-entered addresses, never the full street. */
-function areaFromAddress(address?: string) {
-  if (!address) return null;
-  const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
-  return parts.length > 1 ? parts[parts.length - 1] : null;
-}
-
-function areaLabel(place: DayWithRelations["place"]) {
-  if (place.addressNeighborhood) return place.addressNeighborhood;
-  if (place.addressCity && place.addressCity !== "Capital") return place.addressCity;
-  if (place.addressRegion) return place.addressRegion;
-  return areaFromAddress(place.address);
-}
-
-function amenityList(amenities?: string) {
-  return (amenities ?? "")
-    .split(",")
-    .map((a) => a.trim())
-    .filter(Boolean);
-}
-
 function audienceLabel(circleName?: string | null) {
   return circleName ? `“${circleName}”` : "todos tus amigos";
 }
@@ -63,13 +43,26 @@ function profileHref(profileUserId: string, viewerId: string) {
   return profileUserId === viewerId ? "/profile" : userProfilePath(profileUserId);
 }
 
-export function SpotsChip({ taken, capacity }: { taken: number; capacity: number }) {
+/**
+ * `tone="neutral"` is for the host's own list, where a full day is the goal
+ * rather than a closed door: it states the fact without the clay alarm.
+ */
+export function SpotsChip({
+  taken,
+  capacity,
+  tone = "alert",
+}: {
+  taken: number;
+  capacity: number;
+  tone?: "alert" | "neutral";
+}) {
   const left = capacity - taken;
   const full = left <= 0;
+  const fullClass = tone === "neutral" ? "bg-amenity text-faded" : "bg-clay/12 text-clay";
   return (
     <span
-      className={`rounded-full px-2.5 py-0.5 font-mono text-[11px] font-medium ${
-        full ? "bg-clay/12 text-clay" : "bg-olive/12 text-olive"
+      className={`shrink-0 rounded-full px-2.5 py-0.5 font-mono text-[11px] font-medium ${
+        full ? fullClass : "bg-olive/12 text-olive"
       }`}
     >
       {full ? "Completo" : `${left} ${left === 1 ? "lugar" : "lugares"}`}

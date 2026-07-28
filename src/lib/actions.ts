@@ -29,7 +29,8 @@ import {
   TERMS_REQUIRED_MESSAGE,
   TERMS_VERSION,
 } from "@/lib/terms";
-import { formatDay, todayBA } from "@/lib/tz";
+import { MAX_DAY_CAPACITY } from "@/lib/place";
+import { formatDay, todayBA, weekdayOf, WEEKDAY_PLURAL } from "@/lib/tz";
 import { appUrl } from "@/lib/url";
 
 const first = (name: string | null) => name?.split(" ")[0] ?? "Alguien";
@@ -68,6 +69,9 @@ type HostDayFormState = ProfileFormState;
 const MAX_PLACE_PHOTOS = 9;
 const MAX_DAY_DESCRIPTION_LENGTH = 280;
 const MAX_PLACE_TEXT = 240;
+
+const parseCapacity = (raw: FormDataEntryValue | null, fallback = 4) =>
+  Math.min(MAX_DAY_CAPACITY, Math.max(1, Number(raw ?? fallback) || fallback));
 
 // --- Profile ---
 
@@ -198,7 +202,7 @@ export async function savePlace(
     ...addressResult.data,
     arrivalNotes: String(formData.get("arrivalNotes") ?? "").trim(),
     amenities: String(formData.get("amenities") ?? "").trim(),
-    defaultCapacity: Math.max(1, Number(formData.get("defaultCapacity") ?? 4) || 4),
+    defaultCapacity: parseCapacity(formData.get("defaultCapacity")),
   };
   const photoResult = normalizePlacePhotoUrls(formData.getAll("photoUrls"));
   if (!photoResult.ok) return { status: "error", message: photoResult.message };
@@ -348,7 +352,7 @@ export async function createOneOffDay(
     return { status: "error", message: "Revisá el horario: la hora de cierre va después." };
   }
   const { startTime, endTime } = times;
-  const capacity = Math.max(1, Number(formData.get("capacity") ?? 4) || 4);
+  const capacity = parseCapacity(formData.get("capacity"));
   const descriptionResult = normalizeDayDescription(formData.get("description"));
   if (!descriptionResult.ok) return { status: "error", message: descriptionResult.message };
   let circleId;
@@ -381,6 +385,32 @@ export async function createOneOffDay(
   };
 }
 
+/**
+ * The one composer on /host. A date is always picked; the "repetir" switch decides
+ * whether that date becomes a single day or the weekday of a recurring rule, whose
+ * instances then open themselves three weeks ahead.
+ */
+export async function openDay(
+  prevState: HostDayFormState,
+  formData: FormData
+): Promise<HostDayFormState> {
+  const date = String(formData.get("date") ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < todayBA()) {
+    return { status: "error", message: "Elegí una fecha válida." };
+  }
+  if (formData.get("repeat") !== "on") return createOneOffDay(prevState, formData);
+
+  // Rules materialize from tomorrow on, so a recurring day can't also open today.
+  if (date === todayBA()) {
+    return {
+      status: "error",
+      message: "Las juntadas que se repiten arrancan mañana. Elegí otra fecha, o abrí hoy suelto.",
+    };
+  }
+  formData.set("weekdays", String(weekdayOf(date)));
+  return createRule(prevState, formData);
+}
+
 export async function updateDay(
   _prevState: HostDayFormState,
   formData: FormData
@@ -409,12 +439,25 @@ export async function updateDay(
   const descriptionResult = normalizeDayDescription(formData.get("description"));
   if (!descriptionResult.ok) return { status: "error", message: descriptionResult.message };
 
+  // Chairs never drop below the people already sitting in them: the host takes
+  // someone out first, or cancels the day. Silently un-inviting is not on offer.
+  const taken = day.attendances.length;
+  const capacityRaw = formData.get("capacity");
+  const capacity = capacityRaw === null ? day.capacity : parseCapacity(capacityRaw, day.capacity);
+  if (capacity < taken) {
+    return {
+      status: "error",
+      message: `Ya se sumaron ${taken}. Para bajar las sillas, sacá a alguien primero.`,
+    };
+  }
+
   const dateChanged = date !== day.date;
   const scheduleChanged = dateChanged || startTime !== day.startTime || endTime !== day.endTime;
   const updatedData = {
     date,
     startTime,
     endTime,
+    capacity,
     description: descriptionResult.description,
     reminderSent: scheduleChanged ? false : day.reminderSent,
   };
@@ -669,7 +712,7 @@ export async function createRule(
     return { status: "error", message: "Revisá el horario: la hora de cierre va después." };
   }
   const { startTime, endTime } = times;
-  const capacity = Math.max(1, Number(formData.get("capacity") ?? 4) || 4);
+  const capacity = parseCapacity(formData.get("capacity"));
   const descriptionResult = normalizeDayDescription(formData.get("description"));
   if (!descriptionResult.ok) return { status: "error", message: descriptionResult.message };
   let circleId;
@@ -710,7 +753,9 @@ export async function createRule(
 
   return {
     status: "success",
-    message: `Listo, nueva juntada recurrente creada. Ya abrimos las próximas fechas.`,
+    message: `Listo, ahora abrís todos los ${weekdays
+      .map((d) => WEEKDAY_PLURAL[d])
+      .join(" y ")}. Ya abrimos las próximas tres semanas.`,
   };
 }
 
