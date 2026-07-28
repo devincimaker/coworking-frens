@@ -46,8 +46,55 @@ export async function createDay(opts: {
   });
 }
 
+type AudienceDay = {
+  id: string;
+  hostId?: string;
+  status?: string;
+  audience: { userId: string }[];
+};
+
+async function addMissingAudienceRows(days: AudienceDay[], audience: string[]) {
+  for (const day of days) {
+    if (day.status && day.status !== "open") continue;
+    const currentAudience = new Set(day.audience.map((a) => a.userId));
+    const missing = audience.filter((userId) => !currentAudience.has(userId));
+    if (missing.length === 0) continue;
+    await prisma.dayAudience.createMany({
+      data: missing.map((userId) => ({ dayId: day.id, userId })),
+      skipDuplicates: true,
+    });
+  }
+}
+
+/** Keep open all-friends days aligned with the host's current friend list. */
+export async function syncOpenAllFriendsDayAudiences() {
+  const days = await prisma.coworkDay.findMany({
+    where: {
+      circleId: null,
+      status: "open",
+      date: { gte: todayBA() },
+    },
+    select: {
+      id: true,
+      hostId: true,
+      audience: { select: { userId: true } },
+    },
+  });
+  const audienceByHost = new Map<string, string[]>();
+  for (const day of days) {
+    let audience = audienceByHost.get(day.hostId);
+    if (!audience) {
+      audience = await friendIdsOf(day.hostId);
+      audienceByHost.set(day.hostId, audience);
+    }
+    await addMissingAudienceRows([day], audience);
+  }
+}
+
 /** Create missing CoworkDay instances for the next 3 weeks for all active rules (idempotent). */
 export async function materializeRules() {
+  await syncOpenAllFriendsDayAudiences();
+
   const rules = await prisma.availabilityRule.findMany({
     where: { active: true, host: { place: { isNot: null } } },
   });
@@ -55,7 +102,6 @@ export async function materializeRules() {
   const nowTime = currentTimeBA();
   for (const rule of rules) {
     const weekdays = new Set(rule.weekdays.split(",").map(Number));
-    const audience = await resolveAudience(rule.hostId, rule.circleId);
     const existing = await prisma.coworkDay.findMany({
       where: { ruleId: rule.id, date: { gte: today } },
       select: {
@@ -67,15 +113,8 @@ export async function materializeRules() {
     });
     const have = new Set(existing.map((d) => d.date));
 
-    for (const day of existing) {
-      if (day.status !== "open") continue;
-      const currentAudience = new Set(day.audience.map((a) => a.userId));
-      const missing = audience.filter((userId) => !currentAudience.has(userId));
-      if (missing.length === 0) continue;
-      await prisma.dayAudience.createMany({
-        data: missing.map((userId) => ({ dayId: day.id, userId })),
-        skipDuplicates: true,
-      });
+    if (rule.circleId) {
+      await addMissingAudienceRows(existing, await resolveAudience(rule.hostId, rule.circleId));
     }
 
     for (let i = 0; i <= MATERIALIZE_HORIZON_DAYS; i++) {

@@ -104,6 +104,7 @@ describe("materializeRules", () => {
     prismaMock.coworkDay.create.mockResolvedValue({ id: "day_1" });
     prismaMock.coworkDay.findMany.mockResolvedValue([]);
     prismaMock.dayAudience.createMany.mockResolvedValue({ count: 0 });
+    prismaMock.availabilityRule.findMany.mockResolvedValue([]);
     friendIdsOfMock.mockResolvedValue(["friend_1"]);
   });
 
@@ -131,7 +132,37 @@ describe("materializeRules", () => {
     ]);
   });
 
-  it("adds newly eligible audience rows to already materialized open rule days", async () => {
+  it("adds current friends to already-open all-friends one-off days", async () => {
+    friendIdsOfMock.mockResolvedValue(["old_friend", "new_friend"]);
+    prismaMock.coworkDay.findMany.mockResolvedValue([
+      {
+        id: "one_off_today",
+        hostId: "host",
+        audience: [{ userId: "old_friend" }],
+      },
+    ]);
+
+    await materializeRules();
+
+    expect(prismaMock.coworkDay.findMany).toHaveBeenCalledWith({
+      where: {
+        circleId: null,
+        status: "open",
+        date: { gte: "2026-07-28" },
+      },
+      select: {
+        id: true,
+        hostId: true,
+        audience: { select: { userId: true } },
+      },
+    });
+    expect(prismaMock.dayAudience.createMany).toHaveBeenCalledWith({
+      data: [{ dayId: "one_off_today", userId: "new_friend" }],
+      skipDuplicates: true,
+    });
+  });
+
+  it("adds newly eligible circle members to already materialized open rule days", async () => {
     prismaMock.availabilityRule.findMany.mockResolvedValue([
       {
         id: "rule_1",
@@ -141,18 +172,23 @@ describe("materializeRules", () => {
         endTime: "17:00",
         capacity: 4,
         description: "",
-        circleId: null,
+        circleId: "circle_1",
       },
     ]);
-    friendIdsOfMock.mockResolvedValue(["old_friend", "new_friend"]);
-    prismaMock.coworkDay.findMany.mockResolvedValue([
-      {
-        id: "day_today",
-        date: "2026-07-28",
-        status: "open",
-        audience: [{ userId: "old_friend" }],
-      },
+    prismaMock.circleMember.findMany.mockResolvedValue([
+      { userId: "old_friend" },
+      { userId: "new_friend" },
     ]);
+    prismaMock.coworkDay.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: "day_today",
+          date: "2026-07-28",
+          status: "open",
+          audience: [{ userId: "old_friend" }],
+        },
+      ]);
 
     await materializeRules();
 
