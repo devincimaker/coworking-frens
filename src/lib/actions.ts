@@ -11,7 +11,10 @@ import {
   areFriends,
   declineFriendRequestForUser,
   friendsOf,
+  markFriendRequestsShownInFriends,
+  markFriendRequestsShownInJuntadas,
   makeFriends,
+  postponeFriendRequestForUser,
   removeFriendForUser,
   requestFriendGlobally,
   requestFriendFromSharedDay,
@@ -42,6 +45,7 @@ function safeRedirectPath(raw: FormDataEntryValue | null) {
 }
 
 function revalidateAll() {
+  revalidatePath("/", "layout");
   revalidatePath("/");
   revalidatePath("/juntadas");
   revalidatePath("/host");
@@ -677,6 +681,25 @@ export async function declineFriendRequest(formData: FormData) {
   const profileUserId = String(formData.get("profileUserId") ?? "");
   await declineFriendRequestForUser(requestId, user.id);
   revalidateFriendRequestSurfaces(undefined, [user.id, profileUserId]);
+}
+
+export async function postponeFriendRequestFromJuntadas(formData: FormData) {
+  const user = await requireOnboardedUser();
+  const requestId = String(formData.get("requestId") ?? "");
+  await postponeFriendRequestForUser(requestId, user.id);
+  revalidatePath("/", "layout");
+  revalidatePath("/juntadas");
+}
+
+export async function markJuntadasFriendRequestBatchShown(requestIds: string[]) {
+  const user = await requireOnboardedUser();
+  await markFriendRequestsShownInJuntadas(requestIds, user.id);
+}
+
+export async function markFriendRequestBadgeSeen(requestIds: string[]) {
+  const user = await requireOnboardedUser();
+  await markFriendRequestsShownInFriends(requestIds, user.id);
+  revalidatePath("/", "layout");
 }
 
 export async function removeFriend(formData: FormData) {

@@ -7,6 +7,7 @@ import { isFeedbackAdminEmail } from "@/lib/admin";
 import { isOnboardingComplete } from "@/lib/profile";
 import { hasAcceptedCurrentTerms, TERMS_ACCEPT_PATH } from "@/lib/terms";
 import { prisma } from "@/lib/prisma";
+import { unseenIncomingFriendRequestCount } from "@/lib/friends";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -31,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!isOnboardingComplete(user)) redirect("/onboarding");
   if (!hasAcceptedCurrentTerms(user)) redirect(TERMS_ACCEPT_PATH);
   const showFeedbackAdmin = isFeedbackAdminEmail(user.email);
+  const unseenFriendRequestCount = await unseenIncomingFriendRequestCount(user.id);
 
   return (
     <>
@@ -40,6 +42,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             user={user}
             signOutAction={signOutToHome}
             showFeedbackAdmin={showFeedbackAdmin}
+            unseenFriendRequestCount={unseenFriendRequestCount}
           />
           <main className="min-w-0 flex-1 pb-[calc(var(--bottom-nav-h)+4.5rem)] md:pb-0">
             <MobileTopBar user={user} />
@@ -47,7 +50,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </main>
         </div>
       </div>
-      <BottomNav showFeedbackAdmin={showFeedbackAdmin} />
+      <BottomNav
+        showFeedbackAdmin={showFeedbackAdmin}
+        unseenFriendRequestCount={unseenFriendRequestCount}
+      />
       <FeedbackWidget aboveBottomNav />
     </>
   );

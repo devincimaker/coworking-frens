@@ -14,6 +14,7 @@ import { formatDay } from "@/lib/tz";
 import { appUrl } from "@/lib/url";
 import { Avatar } from "@/components/avatar";
 import { CopyButton } from "@/components/copy-button";
+import { FriendRequestSeenMarker } from "@/components/friend-request-seen-marker";
 import { MutualFriendsCount } from "@/components/mutual-friends";
 import {
   acceptFriendRequest,
@@ -41,9 +42,13 @@ export default async function FriendsPage() {
   );
   const inviteUrl = `${appUrl()}/invite/${user.inviteToken}`;
   const requestCount = requests.incoming.length + requests.outgoing.length;
+  const unseenIncomingRequestIds = requests.incoming
+    .filter((request) => request.friendsShownAt === null)
+    .map((request) => request.id);
 
   return (
     <div>
+      <FriendRequestSeenMarker requestIds={unseenIncomingRequestIds} />
       <h1 className="page-title">Amigos</h1>
       <p className="mt-2 mb-7 text-[15px] text-faded">
         Tu gente y tus círculos. La amistad siempre es mutua.

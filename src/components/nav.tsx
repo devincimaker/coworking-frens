@@ -75,12 +75,15 @@ export function Sidebar({
   user,
   signOutAction,
   showFeedbackAdmin = false,
+  unseenFriendRequestCount = 0,
 }: {
   user: { name?: string | null; username?: string | null; image?: string | null };
   signOutAction: () => Promise<void>;
   showFeedbackAdmin?: boolean;
+  unseenFriendRequestCount?: number;
 }) {
   const isActive = useActive();
+  const hideFriendRequestBadge = isActive("/friends");
   return (
     <aside className="sticky top-0 hidden h-dvh w-[250px] shrink-0 flex-col gap-1 border-r border-line px-4 py-8 md:flex">
       <Link href="/juntadas" className="mb-6 flex items-center gap-2.5 px-2.5">
@@ -103,7 +106,17 @@ export function Sidebar({
             }`}
           >
             <item.icon />
-            {item.label}
+            <span>{item.label}</span>
+            {item.href === "/friends" &&
+              !hideFriendRequestBadge &&
+              unseenFriendRequestCount > 0 && (
+                <span
+                  aria-label={`${unseenFriendRequestCount} pedidos de amistad nuevos`}
+                  className="ml-auto min-w-6 rounded-full bg-clay px-1.5 py-0.5 text-center font-mono text-[11px] font-semibold leading-5 text-white"
+                >
+                  {unseenFriendRequestCount > 99 ? "99+" : unseenFriendRequestCount}
+                </span>
+              )}
           </Link>
         );
       })}
@@ -138,8 +151,15 @@ export function Sidebar({
   );
 }
 
-export function BottomNav({ showFeedbackAdmin = false }: { showFeedbackAdmin?: boolean }) {
+export function BottomNav({
+  showFeedbackAdmin = false,
+  unseenFriendRequestCount = 0,
+}: {
+  showFeedbackAdmin?: boolean;
+  unseenFriendRequestCount?: number;
+}) {
   const isActive = useActive();
+  const hideFriendRequestBadge = isActive("/friends");
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 flex h-[var(--bottom-nav-h)] border-t border-line bg-paper/90 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md md:hidden">
       {navItems(showFeedbackAdmin).map((item) => {
@@ -148,9 +168,21 @@ export function BottomNav({ showFeedbackAdmin = false }: { showFeedbackAdmin?: b
           <Link
             key={item.href}
             href={item.href}
-            className={`flex flex-1 flex-col items-center gap-1 ${active ? "text-clay" : "text-faded"}`}
+            className={`relative flex flex-1 flex-col items-center gap-1 ${active ? "text-clay" : "text-faded"}`}
           >
-            <item.icon />
+            <span className="relative">
+              <item.icon />
+              {item.href === "/friends" &&
+                !hideFriendRequestBadge &&
+                unseenFriendRequestCount > 0 && (
+                  <span
+                    aria-label={`${unseenFriendRequestCount} pedidos de amistad nuevos`}
+                    className="absolute -top-2 -right-3 min-w-4 rounded-full bg-clay px-1 text-center font-mono text-[9px] font-semibold leading-4 text-white ring-2 ring-paper"
+                  >
+                    {unseenFriendRequestCount > 9 ? "9+" : unseenFriendRequestCount}
+                  </span>
+                )}
+            </span>
             <span className="text-[10px] font-semibold">{item.short}</span>
           </Link>
         );

@@ -24,6 +24,20 @@ export type FriendConnectionState =
 type OpenAudienceStore = Pick<typeof prisma, "coworkDay" | "dayAudience">;
 type FriendStore = Pick<typeof prisma, "friendship" | "friendRequest"> & OpenAudienceStore;
 
+const friendRequestPeopleAndDay = {
+  requester: { select: { id: true, name: true, username: true, email: true, image: true } },
+  recipient: { select: { id: true, name: true, username: true, email: true, image: true } },
+  coworkDay: {
+    select: {
+      id: true,
+      date: true,
+      startTime: true,
+      endTime: true,
+      place: { select: { nickname: true } },
+    },
+  },
+} as const;
+
 export function friendshipPair(u1: string, u2: string): [string, string] {
   return u1 < u2 ? [u1, u2] : [u2, u1];
 }
@@ -342,6 +356,8 @@ export async function requestFriendFromSharedDay({
             status: FRIEND_REQUEST_PENDING,
             coworkDayId,
             respondedAt: null,
+            juntadasShownAt: null,
+            friendsShownAt: null,
             createdAt: new Date(),
           },
         })
@@ -403,6 +419,8 @@ export async function requestFriendGlobally({
             status: FRIEND_REQUEST_PENDING,
             coworkDayId: null,
             respondedAt: null,
+            juntadasShownAt: null,
+            friendsShownAt: null,
             createdAt: new Date(),
           },
         })
@@ -453,24 +471,10 @@ export async function declineFriendRequestForUser(requestId: string, recipientId
 }
 
 export async function friendRequestsForUser(userId: string) {
-  const include = {
-    requester: { select: { id: true, name: true, username: true, email: true, image: true } },
-    recipient: { select: { id: true, name: true, username: true, email: true, image: true } },
-    coworkDay: {
-      select: {
-        id: true,
-        date: true,
-        startTime: true,
-        endTime: true,
-        place: { select: { nickname: true } },
-      },
-    },
-  };
-
   const [incoming, outgoing] = await Promise.all([
     prisma.friendRequest.findMany({
       where: { recipientId: userId, status: FRIEND_REQUEST_PENDING },
-      include,
+      include: friendRequestPeopleAndDay,
       orderBy: { createdAt: "desc" },
     }),
     prisma.friendRequest.findMany({
@@ -478,10 +482,77 @@ export async function friendRequestsForUser(userId: string) {
         requesterId: userId,
         status: { in: [FRIEND_REQUEST_PENDING, FRIEND_REQUEST_DECLINED] },
       },
-      include,
+      include: friendRequestPeopleAndDay,
       orderBy: { createdAt: "desc" },
     }),
   ]);
 
   return { incoming, outgoing };
+}
+
+export async function unseenIncomingFriendRequestCount(userId: string) {
+  return prisma.friendRequest.count({
+    where: {
+      recipientId: userId,
+      status: FRIEND_REQUEST_PENDING,
+      friendsShownAt: null,
+    },
+  });
+}
+
+export async function markFriendRequestsShownInFriends(requestIds: string[], recipientId: string) {
+  if (requestIds.length === 0) return;
+
+  await prisma.friendRequest.updateMany({
+    where: {
+      id: { in: requestIds },
+      recipientId,
+      status: FRIEND_REQUEST_PENDING,
+      friendsShownAt: null,
+    },
+    data: { friendsShownAt: new Date() },
+  });
+}
+
+export async function postponeFriendRequestForUser(requestId: string, recipientId: string) {
+  const postponedAt = new Date();
+
+  await prisma.friendRequest.updateMany({
+    where: {
+      id: requestId,
+      recipientId,
+      status: FRIEND_REQUEST_PENDING,
+    },
+    data: {
+      juntadasShownAt: postponedAt,
+      friendsShownAt: postponedAt,
+    },
+  });
+}
+
+export async function unseenJuntadasFriendRequests(userId: string) {
+  return prisma.friendRequest.findMany({
+    where: {
+      recipientId: userId,
+      status: FRIEND_REQUEST_PENDING,
+      juntadasShownAt: null,
+    },
+    include: friendRequestPeopleAndDay,
+    orderBy: { createdAt: "desc" },
+    take: 2,
+  });
+}
+
+export async function markFriendRequestsShownInJuntadas(requestIds: string[], recipientId: string) {
+  if (requestIds.length === 0) return;
+
+  await prisma.friendRequest.updateMany({
+    where: {
+      id: { in: requestIds },
+      recipientId,
+      status: FRIEND_REQUEST_PENDING,
+      juntadasShownAt: null,
+    },
+    data: { juntadasShownAt: new Date() },
+  });
 }

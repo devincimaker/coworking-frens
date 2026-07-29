@@ -1,5 +1,5 @@
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const authMock = vi.hoisted(() => vi.fn());
@@ -15,6 +15,14 @@ const friendsMock = vi.hoisted(() => ({
   mutualFriends: vi.fn(),
 }));
 const circlesOfMock = vi.hoisted(() => vi.fn());
+const actionsMock = vi.hoisted(() => ({
+  acceptFriendRequest: vi.fn(),
+  createCircle: vi.fn(),
+  declineFriendRequest: vi.fn(),
+  deleteCircle: vi.fn(),
+  markFriendRequestBadgeSeen: vi.fn(),
+  toggleCircleMember: vi.fn(),
+}));
 
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((path: string) => {
@@ -40,13 +48,7 @@ vi.mock("@/lib/url", () => ({
   appUrl: () => "https://frens.test",
 }));
 
-vi.mock("@/lib/actions", () => ({
-  acceptFriendRequest: vi.fn(),
-  createCircle: vi.fn(),
-  declineFriendRequest: vi.fn(),
-  deleteCircle: vi.fn(),
-  toggleCircleMember: vi.fn(),
-}));
+vi.mock("@/lib/actions", () => actionsMock);
 
 vi.mock("next/link", () => ({
   default: ({
@@ -80,6 +82,7 @@ describe("FriendsPage friend request lifecycle", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    actionsMock.markFriendRequestBadgeSeen.mockResolvedValue(undefined);
     authMock.mockResolvedValue({ user: { id: "me" } });
     prismaMock.user.findUnique.mockResolvedValue({
       id: "me",
@@ -120,6 +123,7 @@ describe("FriendsPage friend request lifecycle", () => {
           },
           coworkDay,
           status: "pending",
+          friendsShownAt: null,
         },
       ],
       outgoing: [
@@ -172,6 +176,9 @@ describe("FriendsPage friend request lifecycle", () => {
     expect(screen.getByText("pendiente")).toBeInTheDocument();
     expect(screen.getByText("rechazado")).toBeInTheDocument();
     expect(screen.getByText("Todos (1)")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(actionsMock.markFriendRequestBadgeSeen).toHaveBeenCalledWith(["incoming_1"])
+    );
   });
 
   it("counts mutual friends on incoming requests only", async () => {
@@ -195,6 +202,7 @@ describe("FriendsPage friend request lifecycle", () => {
           },
           coworkDay,
           status: "pending",
+          friendsShownAt: new Date("2026-07-29T12:00:00Z"),
         },
       ],
       outgoing: [],
@@ -238,6 +246,7 @@ describe("FriendsPage friend request lifecycle", () => {
           },
           coworkDay: null,
           status: "pending",
+          friendsShownAt: new Date("2026-07-29T12:00:00Z"),
         },
       ],
       outgoing: [],

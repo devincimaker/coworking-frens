@@ -13,7 +13,10 @@ const friendHelpersMock = vi.hoisted(() => ({
   areFriends: vi.fn(),
   declineFriendRequestForUser: vi.fn(),
   friendsOf: vi.fn(),
+  markFriendRequestsShownInFriends: vi.fn(),
+  markFriendRequestsShownInJuntadas: vi.fn(),
   makeFriends: vi.fn(),
+  postponeFriendRequestForUser: vi.fn(),
   removeFriendForUser: vi.fn(),
   requestFriendGlobally: vi.fn(),
   requestFriendFromSharedDay: vi.fn(),
@@ -45,6 +48,9 @@ vi.mock("@/lib/friends", () => friendHelpersMock);
 import {
   acceptFriendRequest,
   declineFriendRequest,
+  markFriendRequestBadgeSeen,
+  markJuntadasFriendRequestBatchShown,
+  postponeFriendRequestFromJuntadas,
   removeFriend,
   sendFriendRequestFromDay,
   sendFriendRequestFromGente,
@@ -95,6 +101,7 @@ describe("friend request server actions", () => {
     );
     expect(revalidatePathMock).toHaveBeenCalledWith("/friends");
     expect(revalidatePathMock).toHaveBeenCalledWith("/day/[id]", "page");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/", "layout");
     expect(revalidatePathMock).toHaveBeenCalledWith("/day/day_1");
     expect(revalidatePathMock).toHaveBeenCalledWith("/u/recipient");
   });
@@ -179,6 +186,39 @@ describe("friend request server actions", () => {
     expect(sendEmailMock).not.toHaveBeenCalled();
     expect(revalidatePathMock).toHaveBeenCalledWith("/friends");
     expect(revalidatePathMock).toHaveBeenCalledWith("/day/[id]", "page");
+  });
+
+  it("keeps a postponed request pending while acknowledging it across both surfaces", async () => {
+    await postponeFriendRequestFromJuntadas(formData({ requestId: "request_1" }));
+
+    expect(friendHelpersMock.postponeFriendRequestForUser).toHaveBeenCalledWith(
+      "request_1",
+      "me"
+    );
+    expect(friendHelpersMock.declineFriendRequestForUser).not.toHaveBeenCalled();
+    expect(revalidatePathMock).toHaveBeenCalledWith("/", "layout");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/juntadas");
+  });
+
+  it("marks a mounted Juntadas batch as shown for the signed-in recipient", async () => {
+    await markJuntadasFriendRequestBatchShown(["request_1", "request_2"]);
+
+    expect(friendHelpersMock.markFriendRequestsShownInJuntadas).toHaveBeenCalledWith(
+      ["request_1", "request_2"],
+      "me"
+    );
+  });
+
+  it("marks the Amigos badge as seen without answering the requests", async () => {
+    await markFriendRequestBadgeSeen(["request_1", "request_2"]);
+
+    expect(friendHelpersMock.markFriendRequestsShownInFriends).toHaveBeenCalledWith(
+      ["request_1", "request_2"],
+      "me"
+    );
+    expect(friendHelpersMock.acceptFriendRequestForUser).not.toHaveBeenCalled();
+    expect(friendHelpersMock.declineFriendRequestForUser).not.toHaveBeenCalled();
+    expect(revalidatePathMock).toHaveBeenCalledWith("/", "layout");
   });
 
   it("removes a friend and revalidates both profiles", async () => {

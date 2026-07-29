@@ -17,6 +17,7 @@ const prismaMock = vi.hoisted(() => ({
     deleteMany: vi.fn(),
   },
   friendRequest: {
+    count: vi.fn(),
     create: vi.fn(),
     deleteMany: vi.fn(),
     findFirst: vi.fn(),
@@ -49,11 +50,16 @@ import {
   declineFriendRequestForUser,
   friendConnectionStates,
   friendshipPair,
+  markFriendRequestsShownInFriends,
+  markFriendRequestsShownInJuntadas,
   makeFriends,
   mutualFriends,
+  postponeFriendRequestForUser,
   removeFriendForUser,
   requestFriendGlobally,
   requestFriendFromSharedDay,
+  unseenIncomingFriendRequestCount,
+  unseenJuntadasFriendRequests,
 } from "./friends";
 
 const sharedDay = {
@@ -81,6 +87,91 @@ describe("friend request helpers", () => {
 
   it("normalizes friendship pairs lexicographically", () => {
     expect(friendshipPair("u_z", "u_a")).toEqual(["u_a", "u_z"]);
+  });
+
+  it("counts only unseen pending incoming requests for the navigation badge", async () => {
+    prismaMock.friendRequest.count.mockResolvedValue(3);
+
+    await expect(unseenIncomingFriendRequestCount("me")).resolves.toBe(3);
+    expect(prismaMock.friendRequest.count).toHaveBeenCalledWith({
+      where: {
+        recipientId: "me",
+        status: FRIEND_REQUEST_PENDING,
+        friendsShownAt: null,
+      },
+    });
+  });
+
+  it("marks incoming requests as seen in Amigos without answering them", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T13:00:00Z"));
+
+    await markFriendRequestsShownInFriends(["request_1", "request_2"], "me");
+
+    expect(prismaMock.friendRequest.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: ["request_1", "request_2"] },
+        recipientId: "me",
+        status: FRIEND_REQUEST_PENDING,
+        friendsShownAt: null,
+      },
+      data: { friendsShownAt: new Date("2026-07-29T13:00:00Z") },
+    });
+  });
+
+  it("postpones a request by acknowledging it in both Juntadas and Amigos", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T20:00:00Z"));
+
+    await postponeFriendRequestForUser("request_1", "me");
+
+    expect(prismaMock.friendRequest.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: "request_1",
+        recipientId: "me",
+        status: FRIEND_REQUEST_PENDING,
+      },
+      data: {
+        juntadasShownAt: new Date("2026-07-29T20:00:00Z"),
+        friendsShownAt: new Date("2026-07-29T20:00:00Z"),
+      },
+    });
+  });
+
+  it("loads only pending requests not yet shown in Juntadas", async () => {
+    prismaMock.friendRequest.findMany.mockResolvedValue([{ id: "request_1" }]);
+
+    await expect(unseenJuntadasFriendRequests("me")).resolves.toEqual([
+      { id: "request_1" },
+    ]);
+    expect(prismaMock.friendRequest.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          recipientId: "me",
+          status: FRIEND_REQUEST_PENDING,
+          juntadasShownAt: null,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 2,
+      })
+    );
+  });
+
+  it("marks a shown batch without touching answered or already-shown requests", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T12:00:00Z"));
+
+    await markFriendRequestsShownInJuntadas(["request_1", "request_2"], "me");
+
+    expect(prismaMock.friendRequest.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: ["request_1", "request_2"] },
+        recipientId: "me",
+        status: FRIEND_REQUEST_PENDING,
+        juntadasShownAt: null,
+      },
+      data: { juntadasShownAt: new Date("2026-07-29T12:00:00Z") },
+    });
   });
 
   it("removes an existing friendship and private circle memberships", async () => {
@@ -363,6 +454,8 @@ describe("friend request helpers", () => {
         status: FRIEND_REQUEST_PENDING,
         coworkDayId: "day_1",
         respondedAt: null,
+        juntadasShownAt: null,
+        friendsShownAt: null,
         createdAt: expect.any(Date),
       },
     });

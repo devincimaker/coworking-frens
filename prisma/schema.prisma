@@ -58,16 +58,18 @@ model Friendship {
 
 // Request lifecycle: pending | accepted | declined.
 model FriendRequest {
-  id          String     @id @default(cuid())
-  requesterId String
-  recipientId String
-  coworkDayId String?
-  status      String     @default("pending")
-  createdAt   DateTime   @default(now())
-  respondedAt DateTime?
-  requester   User       @relation("FriendRequestRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  recipient   User       @relation("FriendRequestRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  coworkDay   CoworkDay? @relation(fields: [coworkDayId], references: [id], onDelete: SetNull)
+  id              String     @id @default(cuid())
+  requesterId     String
+  recipientId     String
+  coworkDayId     String?
+  status          String     @default("pending")
+  createdAt       DateTime   @default(now())
+  respondedAt     DateTime?
+  juntadasShownAt DateTime?
+  friendsShownAt  DateTime?
+  requester       User       @relation("FriendRequestRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  recipient       User       @relation("FriendRequestRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  coworkDay       CoworkDay? @relation(fields: [coworkDayId], references: [id], onDelete: SetNull)
 
   @@unique([requesterId, recipientId])
   @@index([recipientId, status])
