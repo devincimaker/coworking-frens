@@ -41,7 +41,7 @@ const place: HostPlaceData = {
   addressCountry: null,
   addressPostalCode: null,
   arrivalNotes: "",
-  amenities: "wifi rápido",
+  amenityKeys: ["wifi_rapido", "mate"],
   defaultCapacity: 4,
   photos: [{ id: "photo_1", url: "https://example.com/nido.jpg" }],
 };

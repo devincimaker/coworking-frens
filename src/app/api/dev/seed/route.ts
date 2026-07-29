@@ -62,7 +62,7 @@ export async function GET() {
       nickname: "El Nido",
       address: "Gorriti 4380, Palermo",
       arrivalNotes: "Ring 3B. Dog is friendly. Wifi pass on the fridge.",
-      amenities: "fast wifi, 2 monitors, espresso, balcony",
+      amenityKeys: ["wifi_rapido", "monitor", "cafe", "patio", "pet_friendly"],
       defaultCapacity: 3,
     },
   });
@@ -115,7 +115,7 @@ export async function GET() {
       nickname: "La Terraza",
       address: "Av. Caseros 750, San Telmo",
       arrivalNotes: "Portero knows, say you're with Marco. Rooftop if it's sunny.",
-      amenities: "wifi, standing desk, mate, rooftop",
+      amenityKeys: ["wifi_rapido", "mate", "patio", "bandejas", "consola"],
       defaultCapacity: 2,
     },
   });

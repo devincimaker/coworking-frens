@@ -6,6 +6,8 @@ import { formatDay, todayBA } from "@/lib/tz";
 import { accentFor, stripes } from "@/lib/accent";
 import { friendConnectionStates, type FriendConnectionState } from "@/lib/friends";
 import { userProfilePath } from "@/lib/profile";
+import { amenitiesFor } from "@/lib/amenities";
+import { AmenityChips } from "@/components/amenity-chips";
 import { Avatar } from "@/components/avatar";
 import { DayOwnerControls } from "@/components/edit-day-form";
 import {
@@ -128,10 +130,7 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
   const primaryPhoto = placePhotos[0] ?? null;
   const description = day.description.trim();
   const mapsHref = googleMapsHref(day.place);
-  const amenities = (day.place.amenities ?? "")
-    .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean);
+  const hasSetup = amenitiesFor(day.place.amenityKeys).length > 0;
   const isAttending = day.attendances.some((att) => att.user.id === userId);
   const canRequestAttendees = !isHost && isAttending;
   const selectedCircle = day.circle ?? day.rule?.circle ?? null;
@@ -336,16 +335,10 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
                 <p className="text-ink">{day.place.address || "Preguntale al anfitrión"}</p>
               )}
             </div>
-            {amenities.length > 0 && (
+            {hasSetup && (
               <div>
                 <p className="label">El setup</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {amenities.map((am, i) => (
-                    <span key={i} className="amenity">
-                      {am}
-                    </span>
-                  ))}
-                </div>
+                <AmenityChips keys={day.place.amenityKeys} />
               </div>
             )}
             {day.place.arrivalNotes && (

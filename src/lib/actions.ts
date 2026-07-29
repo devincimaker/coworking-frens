@@ -16,6 +16,7 @@ import {
   requestFriendGlobally,
   requestFriendFromSharedDay,
 } from "@/lib/friends";
+import { parseAmenityKeys } from "@/lib/amenities";
 import { createDay, materializeRules } from "@/lib/days";
 import {
   normalizeBio,
@@ -201,7 +202,7 @@ export async function savePlace(
     nickname: String(formData.get("nickname") ?? "").trim() || "My place",
     ...addressResult.data,
     arrivalNotes: String(formData.get("arrivalNotes") ?? "").trim(),
-    amenities: String(formData.get("amenities") ?? "").trim(),
+    amenityKeys: parseAmenityKeys(formData.getAll("amenityKeys")),
     defaultCapacity: parseCapacity(formData.get("defaultCapacity")),
   };
   const photoResult = normalizePlacePhotoUrls(formData.getAll("photoUrls"));

@@ -38,7 +38,7 @@ export default async function HostPage() {
           addressCountry: place.addressCountry,
           addressPostalCode: place.addressPostalCode,
           arrivalNotes: place.arrivalNotes,
-          amenities: place.amenities,
+          amenityKeys: place.amenityKeys,
           defaultCapacity: place.defaultCapacity,
           photos: place.photos.map((photo) => ({ id: photo.id, url: photo.url })),
         }

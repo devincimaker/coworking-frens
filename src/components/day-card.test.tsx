@@ -40,7 +40,7 @@ const day = {
     addressNeighborhood: "Palermo",
     addressCity: "Buenos Aires",
     addressRegion: "CABA",
-    amenities: "",
+    amenityKeys: [],
     photos: [],
   },
   attendances: [],
@@ -70,5 +70,36 @@ describe("DayCard audience label", () => {
       "href",
       "/u/host"
     );
+  });
+});
+
+describe("DayCard setup chips", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("labels each amenity from the catalogue, in catalogue order", () => {
+    const place = { ...day.place, amenityKeys: ["mate", "wifi_rapido"] };
+    render(<DayCard day={{ ...day, place }} userId="guest" />);
+
+    const chips = screen.getAllByText(/Internet rápido|Mate/);
+    expect(chips.map((chip) => chip.textContent)).toEqual(["Internet rápido", "Mate"]);
+  });
+
+  it("counts what does not fit rather than dropping it silently", () => {
+    const place = {
+      ...day.place,
+      amenityKeys: ["mate", "wifi_rapido", "monitor", "aire", "pileta", "consola"],
+    };
+    render(<DayCard day={{ ...day, place }} userId="guest" />);
+
+    expect(screen.getByText("+2")).toBeInTheDocument();
+    expect(screen.queryByText("Consola de juegos")).not.toBeInTheDocument();
+  });
+
+  it("shows nothing at all when the host has picked nothing", () => {
+    const { container } = render(<DayCard day={day} userId="guest" />);
+
+    expect(container.querySelector("svg")).toBeNull();
   });
 });

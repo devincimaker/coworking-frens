@@ -113,7 +113,7 @@ model Place {
   addressCountry      String?
   addressPostalCode   String?
   arrivalNotes        String       @default("")
-  amenities           String       @default("") // free-text tags, comma-separated
+  amenityKeys         String[]     @default([]) // keys from the catalogue in src/lib/amenities.ts
   defaultCapacity     Int          @default(4)
   host                User         @relation(fields: [hostId], references: [id], onDelete: Cascade)
   photos              PlacePhoto[]

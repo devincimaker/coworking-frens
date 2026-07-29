@@ -24,11 +24,3 @@ export function areaLabel(place: PlaceArea) {
   if (place.addressRegion) return place.addressRegion;
   return areaFromAddress(place.address);
 }
-
-/** The comma-separated amenities column, as a clean list. */
-export function amenityList(amenities?: string) {
-  return (amenities ?? "")
-    .split(",")
-    .map((a) => a.trim())
-    .filter(Boolean);
-}

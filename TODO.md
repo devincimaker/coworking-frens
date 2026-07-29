@@ -4,9 +4,6 @@
 
 - [ ] Build a native iPhone app
   - Create an iOS client for the coworking flow, including authentication, feed, hosting, invites, and attendance.
-- [ ] Replace free-text amenities with preset options
-  - Let hosts choose from a fixed set of amenities instead of typing arbitrary comma-separated text.
-  - Store amenities as structured values so feed/day filters and place displays stay consistent.
 - [ ] Let hosts open coworking days to friends of friends
   - Add an audience option for coworking days that includes direct friends plus friends-of-friends.
   - Support circle-scoped expansion, where a host can invite a chosen circle and those members' friends.
@@ -97,6 +94,29 @@
   - Feedback notifications go to `ADMIN_EMAILS`, not to users — those stay email regardless.
   - Open question: for someone who opted in, does an event send on both channels or only WhatsApp? Both is the
     simpler build and the noisier inbox; per-event choice is probably over-engineering it for now.
+- [ ] Localize the app so people outside Argentina can use it
+  - Two different problems wear the same word here. The copy is one; the clock is the other, and the clock is
+    the one that breaks correctness rather than tone.
+  - **Time zones first.** `tz.ts` opens by stating the assumption: everyone is in Argentina. Dates and times are
+    plain strings ("2026-07-21", "09:00") with no UTC conversion anywhere, and `todayBA()` decides what "today"
+    means for every day query (`queries.ts`, `days.ts`, `actions.ts`) and for the day-before reminder in
+    `api/cron`. A host in Madrid opening a Thursday gets it aged out of the feed on Buenos Aires' clock.
+  - The zone belongs to the *place*, not to the user: a juntada happens at someone's kitchen table at a
+    wall-clock hour. What each attendee needs is that hour rendered where they are. So `Place` gets a timezone —
+    the Places picker already stores coordinates to derive it — and the string-comparison date filters need
+    rethinking, because "date >= todayBA()" stops being one comparison once there are many todays.
+  - **The copy is a product decision before it is a technical one.** Every string is rioplatense and hardcoded,
+    from the UI to the 16 `sendEmail` call sites to `/terminos`. That voice is a commitment, not a detail: a
+    literal translation of "Sumate a la que quieras" is a different product. Decide whether other locales get a
+    neutral translated voice or a native one written by someone who actually speaks it.
+  - Dates will not survive a dictionary. `formatDay`, `formatDayPhrase` and `joinedPhrase` build sentences by
+    concatenation ("se sumó el jueves 30"), and the `MONTHS` / `WEEKDAY_*` arrays are hand-rolled Spanish. Other
+    languages order those pieces differently, so they have to become whole formatted messages rather than
+    fragments glued together. Same for `hour12: false`, which is an assumption and not a constant.
+  - Smaller things that are simply wrong outside AR: `areaLabel` special-cases the string "Capital", the admin
+    feedback list and `formatTimestamp` hardcode `es-AR`, and no `User` or `Place` row stores a locale at all.
+  - Check the routing and dictionary approach against `node_modules/next/dist/docs/` before picking one. This
+    Next version's i18n story is not the one in anyone's memory.
 
 ## In Progress
 
@@ -104,6 +124,41 @@ _No tasks._
 
 ## Done
 
+- [x] Replace free-text amenities with preset options
+  - `src/lib/amenities.ts` is the catalogue: 20 items in four groups (Para trabajar, La casa, La cocina, El
+    clima de la casa), each a permanent `key` plus a label that lives in the catalogue rather than in the
+    column — which is what makes them translatable later. `Place.amenities` became `amenityKeys String[]`,
+    and that is the only amenity column there is.
+  - **The catalogue is a closed vocabulary.** No free-text note beside it: if hosts can still type, the
+    spellings come straight back and the whole point is lost. The cost is real and was taken knowingly — the
+    migration drops anything no synonym reaches ("big table", "mesa grande", "standing desk", "plants" in the
+    dev data), because with no note column there is nowhere for it to land.
+  - Deliberately *not* in the catalogue: mesa larga, silla cómoda, se cocina al mediodía, ascensor,
+    estacionamiento, accesible sin escaleras, hay perro en casa, hay gato en casa. Keys are permanent, so
+    adding one back later is cheap; renaming one orphans every place that picked it.
+  - The picker follows the designer's 5b: the four groups arrive folded, each one row carrying its own count.
+    Twenty chips laid flat is thirteen rows on a phone; this is four. What is picked shows inside its group
+    and nowhere else — a summary above repeats the same chip and reads as a second, different thing. A folded
+    group keeps its checkboxes mounted (a hidden input still submits), so the form posts one `amenityKeys`
+    field whatever is open and `savePlace` never learned any of this happened.
+  - The trade the fold costs: the field now needs JavaScript. The inputs are still native checkboxes, but
+    `checked` is controlled, so the flat version's "works before JS arrives" is gone. The form already depends
+    on JS through `useActionState`, so this loses nothing that was actually being relied on.
+  - Chip metrics are taken from the comp rather than guessed: 14px, weight 500 unpicked and 600 picked,
+    9/14 padding, 16px icon at 1.8 stroke, `clay-deep` on `clay-tint` when picked. Two traps: a bare `hover:`
+    outranks `peer-checked:`, so a picked chip greyed out under the cursor until `peer-checked:hover:` restated
+    it; and the expanded chip block needs a top inset as well as a bottom one, or the only gap above the chips
+    belongs to the header and hovering the header tints it, gluing the chips to the band.
+  - The mate glyph was a circle, a diagonal and a corner — which draws ♂, not a drink. It is a gourd with a
+    bombilla now. Worth checking each icon against what it accidentally spells.
+  - Each item has a stroke icon in `amenity-icon.tsx`, drawn to the 24-box the host screen already uses; a test
+    asserts every catalogue key has one, so adding an item without a glyph fails rather than renders blank.
+  - `AmenityChips` is the single read path — feed card (4, then `+N`), folded house strip, day page (all of
+    them) — so a house reads the same everywhere.
+  - The migration maps what hosts already wrote through a frozen synonym list ("fast wifi" / "wifi" / "wifi
+    rápido" → `wifi_rapido`), lowercasing and stripping accents. Verified against every row in the dev
+    database before being applied to it.
+  - Nothing filters on this yet, and no surface says it does. That is the next thing this unlocks.
 - [x] Show mutual friends with someone
   - Added `mutualFriends()` beside `friendConnectionStates()`: batched, and it returns only the intersection of
     the viewer's friends with each person's — never anyone's full friend list.

@@ -27,7 +27,7 @@ export type HostPlaceData = {
   addressCountry: string | null;
   addressPostalCode: string | null;
   arrivalNotes: string;
-  amenities: string;
+  amenityKeys: string[];
   defaultCapacity: number;
   photos: { id: string; url: string }[];
 };

@@ -9,6 +9,8 @@
   --color-line: rgba(60, 40, 20, 0.09);
   --color-clay: oklch(0.6 0.16 40);
   --color-clay-deep: oklch(0.5 0.16 40);
+  /* The wash behind a chosen chip — warmer than clay at low opacity, which goes grey. */
+  --color-clay-tint: oklch(0.96 0.03 45);
   --color-olive: oklch(0.58 0.1 145);
   --color-grape: oklch(0.64 0.13 295);
   --color-grape-deep: oklch(0.55 0.14 315);
@@ -83,6 +85,13 @@
   --shadow-hero: 0 40px 80px -40px rgba(60, 40, 20, 0.6);
   --shadow-coral: 0 14px 30px -14px var(--color-coral-500);
   --shadow-coral-lg: 0 32px 62px -34px var(--color-coral-500);
+}
+
+/* The mobile tab bar's own height, home indicator included. Anything that has
+   to clear it — the feedback pill, a page's bottom padding — measures from
+   here, so the safe area is counted once instead of once per element. */
+:root {
+  --bottom-nav-h: calc(3.0625rem + max(0.75rem, env(safe-area-inset-bottom)));
 }
 
 html {

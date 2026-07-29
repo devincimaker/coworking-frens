@@ -81,7 +81,7 @@ function dayWithAttendees(
       googlePlaceId: null,
       latitude: null,
       longitude: null,
-      amenities: "",
+      amenityKeys: [],
       arrivalNotes: "",
       photos: [],
     },

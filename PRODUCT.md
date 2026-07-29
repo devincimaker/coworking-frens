@@ -86,8 +86,10 @@ Confirmed and built:
 - Mutual friends (the intersection only, never anyone's full list) on the `u/[id]` profile
   and on incoming friend requests. Not yet on Gente or day attendee lists.
 - Private circles (owner-only visibility) used as the audience for a day or a recurring rule.
-- One `Place` per user: nickname, Google Places–backed address, arrival notes, free-text
-  amenities, default capacity, and an ordered photo gallery (Vercel Blob).
+- One `Place` per user: nickname, Google Places–backed address, arrival notes, amenities
+  picked from a closed catalogue (20 items in four groups, icon + label, keys stored in
+  `amenityKeys`), default capacity, and an ordered photo gallery (Vercel Blob). There is
+  no free-text amenity field: the catalogue is the whole vocabulary, deliberately.
 - One-off days and weekly recurring rules; day date, hours, capacity, and description are
   editable by the host; days can be cancelled.
 - Audience is **snapshotted at day creation** — later friendship changes do not retroactively
@@ -113,7 +115,8 @@ Known gaps (do not present these as working):
   friends or a circle only. The landing page already describes the feature; this lead is
   deliberate and short — the feature is imminent. Do not "fix" the page by removing the
   claim.
-- Amenities are unstructured free text, not preset options.
+- Nothing filters on amenities yet. `amenityKeys` is structured for it, but no feed or day
+  filter reads it, and no surface promises one.
 - The user's own profile has no read-only mode; it always renders as an edit form.
 - There is no confirmation step before removing a friend, and no way to cancel an outgoing
   friend request.

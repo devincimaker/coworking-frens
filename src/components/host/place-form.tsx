@@ -128,7 +128,7 @@ export function PlaceForm({
                 className="input resize-y leading-relaxed"
               />
             </div>
-            <AmenitiesField defaultValue={place?.amenities ?? ""} />
+            <AmenitiesField selected={place?.amenityKeys ?? []} />
           </>
         )}
 

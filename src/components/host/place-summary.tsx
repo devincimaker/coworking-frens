@@ -1,7 +1,9 @@
 "use client";
 
 import { accentFor, stripes } from "@/lib/accent";
-import { amenityList, areaLabel } from "@/lib/place";
+import { AmenityChips } from "@/components/amenity-chips";
+import { areaLabel } from "@/lib/place";
+import { amenitiesFor } from "@/lib/amenities";
 import type { HostPlaceData } from "@/components/host/types";
 
 /**
@@ -21,7 +23,7 @@ export function PlaceSummary({
   const accent = accentFor(hostId);
   const photos = place.photos.slice(0, 3);
   const extra = place.photos.length - photos.length;
-  const amenities = amenityList(place.amenities).slice(0, 4);
+  const amenities = amenitiesFor(place.amenityKeys);
   const area = areaLabel(place);
   const hasPhotos = place.photos.length > 0;
 
@@ -76,20 +78,14 @@ export function PlaceSummary({
             Sin fotos tu casa aparece rayada en el feed. Una alcanza.
           </p>
         ) : amenities.length > 0 ? (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {amenities.map((amenity) => (
-              <span key={amenity} className="amenity">
-                {amenity}
-              </span>
-            ))}
-          </div>
+          <AmenityChips keys={place.amenityKeys} limit={4} className="mt-2" />
         ) : (
           <button
             type="button"
             className="mt-2 cursor-pointer rounded-full border border-dashed border-rule-strong px-2.5 py-1 font-mono text-[11px] text-faded transition-colors hover:border-clay hover:text-clay"
             onClick={onEdit}
           >
-            + contá qué hay: wifi, monitor, café…
+            + elegí qué hay: internet, monitor, mate…
           </button>
         )}
       </div>

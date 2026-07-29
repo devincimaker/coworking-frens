@@ -28,6 +28,15 @@ export function XIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+/** A chevron pointing down — a row that opens. Rotate it 180° once it has. */
+export function ChevronIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg aria-hidden="true" width={size} height={size} {...base}>
+      <path d="m7 10 5 5 5-5" />
+    </svg>
+  );
+}
+
 /** A chevron folding upward — the card collapsing back into its strip. */
 export function MinimizeIcon({ size = 16 }: { size?: number }) {
   return (

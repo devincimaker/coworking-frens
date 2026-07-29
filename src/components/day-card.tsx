@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { accentFor, stripes } from "@/lib/accent";
-import { amenityList, areaLabel } from "@/lib/place";
+import { AmenityChips } from "@/components/amenity-chips";
+import { areaLabel } from "@/lib/place";
 import { userProfilePath } from "@/lib/profile";
 import { formatDay } from "@/lib/tz";
 import { joinDay, leaveDay } from "@/lib/actions";
@@ -23,7 +24,7 @@ type DayWithRelations = {
     addressNeighborhood?: string | null;
     addressCity?: string | null;
     addressRegion?: string | null;
-    amenities?: string;
+    amenityKeys: string[];
     photos?: { id: string; url: string }[];
   };
   circle?: {
@@ -142,7 +143,6 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
   const full = attendees.length >= day.capacity;
   const a = accentFor(day.hostId);
   const hood = areaLabel(day.place);
-  const amenities = amenityList(day.place.amenities).slice(0, 4);
   const primaryPhoto = day.place.photos?.[0] ?? null;
   const shown = attendees.slice(0, 4);
   const extra = attendees.length - shown.length;
@@ -214,15 +214,7 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
               </div>
             </div>
           </Link>
-          {amenities.length > 0 && (
-            <div className="mt-3.5 flex flex-wrap gap-1.5">
-              {amenities.map((am, i) => (
-                <span key={i} className="amenity">
-                  {am}
-                </span>
-              ))}
-            </div>
-          )}
+          <AmenityChips keys={day.place.amenityKeys} limit={4} className="mt-3.5" />
         </div>
 
         {/* QUIÉNES VAN */}
