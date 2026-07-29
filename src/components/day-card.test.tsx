@@ -55,10 +55,7 @@ describe("DayCard audience label", () => {
     render(<DayCard day={day} userId="host" />);
 
     expect(screen.getByText("para “deep work”")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Lo hosteás vos/ })).toHaveAttribute(
-      "href",
-      "/profile"
-    );
+    expect(screen.getByRole("link", { name: "vos" })).toHaveAttribute("href", "/profile");
   });
 
   it("does not show the host-only audience label to guests", () => {
@@ -66,10 +63,25 @@ describe("DayCard audience label", () => {
 
     expect(screen.queryByText("para “deep work”")).not.toBeInTheDocument();
     expect(screen.getByText("anfitrión")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Lo hostea Ana/ })).toHaveAttribute(
-      "href",
-      "/u/host"
-    );
+    expect(screen.getByRole("link", { name: "Ana" })).toHaveAttribute("href", "/u/host");
+    expect(screen.queryByRole("link", { name: /Lo hostea/ })).not.toBeInTheDocument();
+  });
+
+  it("marks linked profile names with the shared hover affordance", () => {
+    const withAttendee = {
+      ...day,
+      attendances: [{ user: { id: "julian", name: "Julián Pérez", image: null } }],
+    };
+    render(<DayCard day={withAttendee} userId="guest" />);
+
+    const hostLink = screen.getByRole("link", { name: "Ana" });
+    const attendeeLink = screen.getByRole("link", { name: /Julián/ });
+
+    expect(hostLink).toHaveClass("profile-link");
+    expect(hostLink.querySelector("[data-profile-label]")).toHaveTextContent("Ana");
+    expect(attendeeLink).toHaveAttribute("href", "/u/julian");
+    expect(attendeeLink).toHaveClass("profile-link");
+    expect(attendeeLink.querySelector("[data-profile-label]")).toHaveTextContent("Julián");
   });
 });
 

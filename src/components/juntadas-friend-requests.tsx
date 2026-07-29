@@ -121,7 +121,7 @@ export function JuntadasFriendRequests({
             >
               <Link
                 href={request.profileHref}
-                className="flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                className="profile-link flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
               >
                 <Avatar
                   name={request.requester.name}
@@ -129,7 +129,7 @@ export function JuntadasFriendRequests({
                   size={46}
                 />
                 <div className="min-w-0">
-                  <p className="truncate font-display text-[17px] font-semibold text-ink">
+                  <p data-profile-label className="truncate font-display text-[17px] font-semibold text-ink">
                     {request.requester.name ?? request.requester.fallbackName}
                   </p>
                   <p className="mt-0.5 truncate font-mono text-[11px] text-faded">

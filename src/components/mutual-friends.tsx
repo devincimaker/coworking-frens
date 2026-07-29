@@ -75,15 +75,15 @@ export function MutualFriendsPanel({ people }: { people: MutualFriend[] }) {
               <li key={person.id}>
                 <Link
                   href={userProfilePath(person.id)}
-                  className="flex items-center gap-2.5 rounded-xl py-1.5 outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                  className="profile-link flex items-center gap-2.5 rounded-xl py-1.5 outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
                 >
                   <Avatar name={person.name} image={person.image} size={30} />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-ink">
+                    <p data-profile-label className="truncate text-sm font-medium text-ink">
                       {person.name ?? person.username ?? "Fren"}
                     </p>
                     {person.name && person.username && (
-                      <p className="truncate font-mono text-[11px] text-faded">
+                      <p data-profile-label className="truncate font-mono text-[11px] text-faded">
                         @{person.username}
                       </p>
                     )}

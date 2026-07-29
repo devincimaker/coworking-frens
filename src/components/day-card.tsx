@@ -200,20 +200,37 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
               {description}
             </p>
           )}
-          <Link
-            href={profileHref(day.host.id, userId)}
-            className="mt-4 flex items-center gap-2.5 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
-          >
+          <div className="mt-4 flex items-center gap-2.5">
             <Avatar name={day.host.name} image={day.host.image} size={34} />
             <div className="leading-tight">
               <div className="text-sm font-semibold text-ink">
-                {isHost ? "Lo hosteás vos" : `Lo hostea ${firstName(day.host.name)}`}
+                {isHost ? (
+                  <>
+                    Lo hosteás{" "}
+                    <Link
+                      href={profileHref(day.host.id, userId)}
+                      className="profile-link inline-flex rounded-sm outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                    >
+                      <span data-profile-label>vos</span>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    Lo hostea{" "}
+                    <Link
+                      href={profileHref(day.host.id, userId)}
+                      className="profile-link inline-flex rounded-sm outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                    >
+                      <span data-profile-label>{firstName(day.host.name)}</span>
+                    </Link>
+                  </>
+                )}
               </div>
               <div className="font-mono text-[11px] text-faded">
                 {isHost ? `para ${audienceLabel(day.circle?.name)}` : "anfitrión"}
               </div>
             </div>
-          </Link>
+          </div>
           <AmenityChips keys={day.place.amenityKeys} limit={4} className="mt-3.5" />
         </div>
 
@@ -238,10 +255,10 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
                   <Link
                     key={u.id}
                     href={profileHref(u.id, userId)}
-                    className="flex items-center gap-2 rounded-lg outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                    className="profile-link flex items-center gap-2 rounded-lg outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
                   >
                     <Avatar name={u.name} image={u.image} size={26} />
-                    <span className="truncate text-[13px] text-ink">
+                    <span data-profile-label className="truncate text-[13px] text-ink">
                       {u.id === userId ? "Vos" : firstName(u.name)}
                     </span>
                   </Link>

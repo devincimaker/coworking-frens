@@ -85,14 +85,17 @@ export default async function FriendsPage() {
                 >
                   <Link
                     href={userProfilePath(request.requester.id)}
-                    className="flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                    className="profile-link flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
                   >
                     <Avatar name={request.requester.name} image={request.requester.image} size={38} />
                     <div className="min-w-0">
-                      <p className="truncate text-[15px] font-medium text-ink">
+                      <p data-profile-label className="truncate text-[15px] font-medium text-ink">
                         {request.requester.name}
                       </p>
-                      <p className="truncate font-mono text-[11px] text-faded">
+                      <p
+                        data-profile-label={request.coworkDay ? undefined : ""}
+                        className="truncate font-mono text-[11px] text-faded"
+                      >
                         {request.coworkDay
                           ? `${request.coworkDay.place.nickname} · ${formatDay(request.coworkDay.date)}`
                           : `@${request.requester.username ?? request.requester.email.split("@")[0]}`}
@@ -126,14 +129,17 @@ export default async function FriendsPage() {
                 >
                   <Link
                     href={userProfilePath(request.recipient.id)}
-                    className="flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                    className="profile-link flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
                   >
                     <Avatar name={request.recipient.name} image={request.recipient.image} size={38} />
                     <div className="min-w-0">
-                      <p className="truncate text-[15px] font-medium text-ink">
+                      <p data-profile-label className="truncate text-[15px] font-medium text-ink">
                         {request.recipient.name}
                       </p>
-                      <p className="truncate font-mono text-[11px] text-faded">
+                      <p
+                        data-profile-label={request.coworkDay ? undefined : ""}
+                        className="truncate font-mono text-[11px] text-faded"
+                      >
                         {request.coworkDay
                           ? `${request.coworkDay.place.nickname} · ${formatDay(request.coworkDay.date)}`
                           : `@${request.recipient.username ?? request.recipient.email.split("@")[0]}`}
@@ -230,12 +236,12 @@ export default async function FriendsPage() {
                 <Link
                   key={f.id}
                   href={userProfilePath(f.id)}
-                  className="flex items-center gap-3 rounded-xl py-2 outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                  className="profile-link flex items-center gap-3 rounded-xl py-2 outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
                 >
                   <Avatar name={f.name} image={f.image} size={38} />
                   <div className="min-w-0">
-                    <p className="truncate text-[15px] font-medium text-ink">{f.name}</p>
-                    <p className="truncate font-mono text-[11px] text-faded">
+                    <p data-profile-label className="truncate text-[15px] font-medium text-ink">{f.name}</p>
+                    <p data-profile-label className="truncate font-mono text-[11px] text-faded">
                       @{f.username ?? f.email.split("@")[0]}
                     </p>
                     {f.bio && <p className="truncate text-xs text-faded">{f.bio}</p>}

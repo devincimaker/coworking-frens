@@ -124,34 +124,30 @@ export default async function GentePage() {
 
             return (
               <article key={person.id} className="panel p-4 transition-colors hover:border-clay/30">
-                <div className="flex items-start gap-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <Link
                     href={userProfilePath(person.id)}
-                    className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-clay/60"
                     aria-label={title}
+                    className="profile-link flex min-w-0 items-start gap-3 rounded-lg outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
                   >
                     <Avatar name={title} image={person.image} size={54} />
-                  </Link>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <Link
-                        href={userProfilePath(person.id)}
-                        className="min-w-0 rounded-lg outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
-                      >
-                        <h2 className="truncate font-display text-xl font-semibold tracking-tight text-ink">
-                          {title}
-                        </h2>
-                        <p className="truncate font-mono text-[12px] text-faded">
-                          @{person.username}
-                        </p>
-                      </Link>
-                      <GenteRequestControls personId={person.id} state={state} />
+                    <div className="min-w-0">
+                      <h2 data-profile-label className="truncate font-display text-xl font-semibold tracking-tight text-ink">
+                        {title}
+                      </h2>
+                      <p data-profile-label className="truncate font-mono text-[12px] text-faded">
+                        @{person.username}
+                      </p>
                     </div>
-                    <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-ink">
-                      {person.bio}
-                    </p>
+                  </Link>
+                  {/* Avatar + gap keeps the controls and bio aligned with the name. */}
+                  <div className="pl-[66px] sm:pl-0">
+                    <GenteRequestControls personId={person.id} state={state} />
                   </div>
                 </div>
+                <p className="mt-3 whitespace-pre-wrap break-words pl-[66px] text-sm leading-relaxed text-ink">
+                  {person.bio}
+                </p>
               </article>
             );
           })}
