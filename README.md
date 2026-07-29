@@ -41,6 +41,42 @@ manual address entry.
 with two hosted places to click around. In development, open
 `/api/dev/login?email=ana@test.dev&redirectTo=/gente` to sign in as Ana locally.
 
+## Parallel feature work with Git worktrees
+
+Worktrees are optional. Keep using the primary checkout (and port 3000) for small or
+sequential changes. When you want a fully isolated feature environment, run:
+
+```bash
+npm run wt:new -- feature/my-change
+cd ../frens-worktrees/feature-my-change
+npm run dev
+```
+
+Creation is fast: it copy-on-write clones the existing `node_modules` on macOS,
+allocates an app port from 3100-3199, starts one shared local Postgres container,
+creates a database just for the branch, and applies migrations. Env secrets are
+copied from the primary checkout into ignored files; database URLs and `APP_URL` are
+overridden for the isolated environment.
+
+Useful commands:
+
+```bash
+npm run wt:list                         # paths, app ports, and database names
+npm run db:seed                         # run after this checkout's dev server starts
+npm run wt:setup                        # repair/re-run setup inside a linked worktree
+npm run wt:remove -- feature/my-change  # drop its DB and remove the checkout
+```
+
+Cleanup refuses a dirty worktree or one with a running dev server. It deletes the
+local branch only when that branch is already merged into `main`. The shared
+Postgres data volume remains available so creating the next worktree stays quick.
+Uncommitted changes in the checkout where you create a worktree stay there; Git
+worktrees branch from committed `HEAD` unless you provide another base ref.
+
+A normal feature lifecycle is: work and test in the linked checkout, commit and
+push that branch, open/review/merge its PR, then run `wt:remove` from the primary
+checkout. Direct work on `main` remains available whenever isolation is unnecessary.
+
 ## Key paths
 
 | Path                     | What                                             |

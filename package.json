@@ -3,14 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "./scripts/dev.sh",
     "build": "prisma generate && prisma migrate deploy && next build",
-    "start": "next start",
+    "start": "./scripts/start.sh",
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
     "postinstall": "prisma generate",
-    "db:seed": "curl -fsS \"${APP_URL:-http://localhost:3000}/api/dev/seed\""
+    "db:seed": "./scripts/db-seed.sh",
+    "wt:new": "./scripts/worktree-create.sh",
+    "wt:setup": "./scripts/worktree-setup.sh",
+    "wt:list": "./scripts/worktree-list.sh",
+    "wt:remove": "./scripts/worktree-remove.sh"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
