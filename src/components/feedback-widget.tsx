@@ -1,13 +1,20 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { FeedbackImageField } from "@/components/feedback-image-field";
 
 type SubmitState = "idle" | "sending" | "sent";
 
-export function FeedbackWidget() {
+export function FeedbackWidget({
+  aboveBottomNav = false,
+}: {
+  aboveBottomNav?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [error, setError] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageBusy, setImageBusy] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panelId = useId();
@@ -36,6 +43,7 @@ export function FeedbackWidget() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (imageBusy) return;
 
     const form = event.currentTarget;
     const formData = new FormData(form);
@@ -46,15 +54,22 @@ export function FeedbackWidget() {
     setSubmitState("sending");
     setError("");
 
-    const response = await fetch("/api/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message,
-        email: String(formData.get("email") ?? "").trim() || null,
-        page: window.location.pathname,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          imageUrl: imageUrl || null,
+          page: window.location.pathname,
+        }),
+      });
+    } catch {
+      setSubmitState("idle");
+      setError("No se pudo enviar. Revisá tu conexión y probá de nuevo.");
+      return;
+    }
 
     if (!response.ok) {
       setSubmitState("idle");
@@ -63,6 +78,7 @@ export function FeedbackWidget() {
     }
 
     form.reset();
+    setImageUrl("");
     setSubmitState("sent");
     closeTimerRef.current = setTimeout(() => {
       setOpen(false);
@@ -77,15 +93,24 @@ export function FeedbackWidget() {
     setError("");
   }
 
+  // On mobile the pill rests just over whatever is at the bottom of the screen:
+  // the tab bar where there is one, the home indicator where there isn't.
+  const restingPlace = aboveBottomNav
+    ? "bottom-[calc(var(--bottom-nav-h)+0.5rem)]"
+    : "bottom-[max(0.75rem,env(safe-area-inset-bottom))]";
+  const panelHeight = aboveBottomNav
+    ? "max-h-[calc(100dvh-var(--bottom-nav-h)-5.25rem)]"
+    : "max-h-[calc(100dvh-5.25rem-env(safe-area-inset-bottom))]";
+
   return (
-    <div className="fixed right-4 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-50 sm:right-5 md:bottom-5">
+    <div className={`fixed right-4 z-50 sm:right-5 md:bottom-5 ${restingPlace}`}>
       {open && (
         <section
           id={panelId}
-          className="absolute right-0 bottom-[calc(100%+10px)] w-[min(calc(100vw-2rem),22rem)] overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_24px_70px_-34px_rgba(43,38,32,0.65)]"
+          className={`absolute right-0 bottom-[calc(100%+8px)] w-[min(calc(100vw-2rem),22rem)] overflow-y-auto rounded-2xl border border-line bg-surface shadow-[0_24px_70px_-34px_rgba(43,38,32,0.65)] md:max-h-[calc(100dvh-5.5rem)] ${panelHeight}`}
           aria-label="Enviar feedback"
         >
-          <div className="flex items-center justify-between border-b border-line px-4 py-3.5">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface px-4 py-3.5">
             <div>
               <h2 className="font-display text-base font-semibold text-ink">Feedback</h2>
               <p className="text-xs text-faded">Lo leemos para mejorar Frens.</p>
@@ -133,7 +158,11 @@ export function FeedbackWidget() {
               <p className="font-semibold text-ink">Gracias, lo recibimos.</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="grid gap-3 p-4">
+            <form
+              onSubmit={handleSubmit}
+              className="grid gap-3 p-4"
+              aria-busy={submitState === "sending"}
+            >
               <label>
                 <span className="label">Qué mejorarías</span>
                 <textarea
@@ -147,16 +176,12 @@ export function FeedbackWidget() {
                 />
               </label>
 
-              <label>
-                <span className="label">Email opcional</span>
-                <input
-                  type="email"
-                  name="email"
-                  maxLength={320}
-                  placeholder="Para responderte si hace falta"
-                  className="input"
-                />
-              </label>
+              <FeedbackImageField
+                value={imageUrl}
+                onChange={setImageUrl}
+                disabled={submitState === "sending"}
+                onBusyChange={setImageBusy}
+              />
 
               {error && (
                 <p role="alert" className="text-sm font-semibold text-clay">
@@ -166,10 +191,14 @@ export function FeedbackWidget() {
 
               <button
                 type="submit"
-                disabled={submitState === "sending"}
+                disabled={submitState === "sending" || imageBusy}
                 className="btn-primary min-h-11"
               >
-                {submitState === "sending" ? "Enviando..." : "Enviar feedback"}
+                {imageBusy
+                  ? "Subiendo imagen..."
+                  : submitState === "sending"
+                    ? "Enviando..."
+                    : "Enviar feedback"}
               </button>
             </form>
           )}

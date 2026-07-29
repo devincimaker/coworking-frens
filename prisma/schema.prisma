@@ -205,6 +205,7 @@ model Feedback {
   id        String    @id @default(cuid())
   message   String
   email     String?
+  imageUrl  String?
   page      String?
   userAgent String?
   userId    String?

@@ -4,7 +4,7 @@ import { upload } from "@vercel/blob/client";
 import { useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 
-type UploadFolder = "avatars" | "places";
+type UploadFolder = "avatars" | "places" | "feedback";
 type ImageUploadVariant = "avatar" | "place";
 
 type ImageUploadFieldProps = {

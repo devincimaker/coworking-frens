@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_OPTIONAL_LENGTH = 320;
 const MAX_USER_AGENT_LENGTH = 500;
+const MAX_URL_LENGTH = 2048;
 
 function normalizeOptionalText(value: unknown, maxLength = MAX_OPTIONAL_LENGTH) {
   if (typeof value !== "string") return null;
@@ -13,17 +14,25 @@ function normalizeOptionalText(value: unknown, maxLength = MAX_OPTIONAL_LENGTH) 
   return trimmed ? trimmed.slice(0, maxLength) : null;
 }
 
-function normalizeEmail(value: unknown) {
-  const email = normalizeOptionalText(value);
-  if (!email) return null;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
-  return email;
-}
-
 function normalizePage(value: unknown) {
   const page = normalizeOptionalText(value);
   if (!page || !page.startsWith("/") || page.startsWith("//")) return null;
   return page;
+}
+
+function normalizeFeedbackImageUrl(value: unknown) {
+  const rawUrl = normalizeOptionalText(value, MAX_URL_LENGTH);
+  if (!rawUrl) return null;
+
+  try {
+    const url = new URL(rawUrl);
+    if (url.protocol !== "https:") return null;
+    if (!url.hostname.endsWith(".blob.vercel-storage.com")) return null;
+    if (!url.pathname.startsWith("/feedback/")) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
 }
 
 function feedbackRecipients() {
@@ -37,10 +46,12 @@ async function notifyFeedbackOwner({
   email,
   message,
   page,
+  imageUrl,
 }: {
   email: string | null;
   message: string;
   page: string | null;
+  imageUrl: string | null;
 }) {
   const recipients = feedbackRecipients();
   if (recipients.length === 0) return;
@@ -51,6 +62,7 @@ async function notifyFeedbackOwner({
     [
       `De: ${email ?? "sin email"}`,
       `Página: ${page ?? "sin página"}`,
+      `Imagen: ${imageUrl ?? "sin imagen"}`,
       "",
       message,
     ].join("\n")
@@ -83,8 +95,9 @@ export async function POST(request: Request) {
     sessionEmail = user?.email ?? sessionEmail;
   }
 
-  const email = normalizeEmail(payload.email) ?? sessionEmail;
+  const email = sessionEmail;
   const page = normalizePage(payload.page);
+  const imageUrl = normalizeFeedbackImageUrl(payload.imageUrl);
   const userAgent = normalizeOptionalText(
     request.headers.get("user-agent"),
     MAX_USER_AGENT_LENGTH
@@ -95,6 +108,7 @@ export async function POST(request: Request) {
       data: {
         message,
         email,
+        imageUrl,
         page,
         userAgent,
         userId,
@@ -105,7 +119,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "failed to save feedback" }, { status: 500 });
   }
 
-  await notifyFeedbackOwner({ email, message, page });
+  await notifyFeedbackOwner({ email, message, page, imageUrl });
 
   return NextResponse.json({ ok: true });
 }

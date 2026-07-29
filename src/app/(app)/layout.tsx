@@ -41,14 +41,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             signOutAction={signOutToHome}
             showFeedbackAdmin={showFeedbackAdmin}
           />
-          <main className="min-w-0 flex-1 pb-28 md:pb-0">
+          <main className="min-w-0 flex-1 pb-[calc(var(--bottom-nav-h)+4.5rem)] md:pb-0">
             <MobileTopBar user={user} />
             <div className="px-5 py-6 sm:px-6 md:px-11 md:py-10">{children}</div>
           </main>
         </div>
       </div>
       <BottomNav showFeedbackAdmin={showFeedbackAdmin} />
-      <FeedbackWidget />
+      <FeedbackWidget aboveBottomNav />
     </>
   );
 }

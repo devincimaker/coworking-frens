@@ -141,7 +141,7 @@ export function Sidebar({
 export function BottomNav({ showFeedbackAdmin = false }: { showFeedbackAdmin?: boolean }) {
   const isActive = useActive();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-paper/90 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-30 flex h-[var(--bottom-nav-h)] border-t border-line bg-paper/90 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md md:hidden">
       {navItems(showFeedbackAdmin).map((item) => {
         const active = isActive(item.href);
         return (

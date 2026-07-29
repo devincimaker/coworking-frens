@@ -152,6 +152,23 @@ export default async function FeedbackAdminPage({ searchParams }: FeedbackPagePr
                   {item.message}
                 </p>
 
+                {item.imageUrl && (
+                  <a
+                    href={item.imageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 block w-fit overflow-hidden rounded-xl border border-line bg-paper transition-opacity hover:opacity-90"
+                    aria-label="Abrir imagen adjunta en una pestaña nueva"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.imageUrl}
+                      alt="Imagen adjunta al feedback"
+                      className="max-h-80 max-w-full object-contain sm:max-w-xl"
+                    />
+                  </a>
+                )}
+
                 {item.userAgent && (
                   <p className="mt-4 truncate border-t border-line pt-3 font-mono text-[11px] text-faded">
                     {item.userAgent}

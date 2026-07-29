@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-const UPLOAD_FOLDERS = new Set(["avatars", "places"]);
+const UPLOAD_FOLDERS = new Set(["avatars", "places", "feedback"]);
 
 function parseClientPayload(payload: string | null) {
   if (!payload) return { folder: "avatars" };
