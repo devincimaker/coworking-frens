@@ -101,8 +101,15 @@ describe("a day with every chair taken", () => {
 
     expect(screen.getByText("Completo")).toBeInTheDocument();
     expect(screen.getByText(/Sumá una silla desde el lápiz/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Marco" })).toHaveAttribute("href", "/u/u1");
-    expect(screen.getByRole("link", { name: "Lea" })).toHaveAttribute("href", "/u/u2");
+    for (const [name, href] of [
+      ["Marco", "/u/u1"],
+      ["Lea", "/u/u2"],
+    ]) {
+      const link = screen.getByRole("link", { name });
+      expect(link).toHaveAttribute("href", href);
+      expect(link).toHaveClass("profile-link");
+      expect(link.querySelector("[data-profile-label]")).toHaveTextContent(name);
+    }
     expect(screen.getByRole("link", { name: "Marco" }).parentElement?.parentElement).toHaveTextContent(
       "Marco y Lea vienen"
     );

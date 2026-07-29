@@ -81,6 +81,7 @@ describe("DayCard audience label", () => {
     expect(hostLink.querySelector("[data-profile-label]")).toHaveTextContent("Ana");
     expect(attendeeLink).toHaveAttribute("href", "/u/julian");
     expect(attendeeLink).toHaveClass("profile-link");
+    expect(attendeeLink.querySelector("[data-profile-label]")).toHaveTextContent("Julián");
   });
 });
 

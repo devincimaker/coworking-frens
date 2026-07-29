@@ -205,18 +205,20 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
             isHost && !cancelled ? "pr-24" : ""
           }`}
         >
-          <Link
-            href={profileHref(day.host.id, userId)}
-            className="profile-link flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
-          >
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <Avatar name={day.host.name} image={day.host.image} size={40} />
             <div className="min-w-0">
-              <div data-profile-label className="truncate text-sm font-semibold text-ink">
-                {isHost ? "Vos" : day.host.name}
-              </div>
+              <Link
+                href={profileHref(day.host.id, userId)}
+                className="profile-link inline-block max-w-full rounded-md outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+              >
+                <span data-profile-label className="block truncate text-sm font-semibold text-ink">
+                  {isHost ? "Vos" : day.host.name}
+                </span>
+              </Link>
               <div className="font-mono text-[12px] text-faded">anfitrión</div>
             </div>
-          </Link>
+          </div>
           <div className="text-right font-mono text-[12px] text-ink">
             <div>
               {formatDay(day.date)} · {day.startTime}–{day.endTime}
