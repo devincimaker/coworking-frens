@@ -152,6 +152,16 @@ body {
   .btn-ghost {
     @apply border border-line bg-transparent text-ink hover:bg-amenity;
   }
+
+  .profile-link [data-profile-label] {
+    text-decoration-color: color-mix(in oklab, var(--color-clay) 45%, transparent);
+    text-underline-offset: 0.2em;
+  }
+
+  .profile-link [data-profile-label]:hover,
+  .profile-link:focus-visible [data-profile-label] {
+    text-decoration-line: underline;
+  }
   .btn-danger {
     @apply bg-transparent text-[oklch(0.55_0.13_25)] hover:bg-[oklch(0.95_0.03_25)];
   }

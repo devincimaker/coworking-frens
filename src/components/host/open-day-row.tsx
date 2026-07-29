@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { cancelDay, removeAttendee, updateDay } from "@/lib/actions";
 import { formatDay } from "@/lib/tz";
+import { userProfilePath } from "@/lib/profile";
 import { Avatar, AvatarStack } from "@/components/avatar";
 import { SpotsChip } from "@/components/day-card";
 import { NumberStepper } from "@/components/host/number-stepper";
@@ -24,6 +26,41 @@ function nameList(names: string[], max = 3) {
   }
   const extra = names.length - max;
   return `${names.slice(0, max).join(", ")} y ${extra} más`;
+}
+
+function AttendeeNameList({ day }: { day: HostDayData }) {
+  const shown = day.attendees.slice(0, 3);
+  const extra = day.attendees.length - shown.length;
+
+  return (
+    <>
+      {shown.map((person, index) => {
+        const separator = index === 0 ? "" : index === shown.length - 1 && extra === 0 ? " y " : ", ";
+        return (
+          <span key={person.id}>
+            {separator}
+            <Link
+              href={userProfilePath(person.id)}
+              className="profile-link rounded-sm outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+            >
+              <span data-profile-label>{firstName(person.name)}</span>
+            </Link>
+          </span>
+        );
+      })}
+      {extra > 0 && (
+        <>
+          {" y "}
+          <Link
+            href={`/day/${day.id}`}
+            className="rounded-sm font-semibold underline-offset-[0.2em] outline-none hover:text-clay hover:underline focus-visible:ring-2 focus-visible:ring-clay/60"
+          >
+            {extra} más
+          </Link>
+        </>
+      )}
+    </>
+  );
 }
 
 const roundButtonClass =
@@ -234,9 +271,12 @@ export function OpenDayRow({
                   className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl bg-surface px-3 py-2"
                 >
                   <Avatar name={person.name} image={person.image} size={28} />
-                  <span className="min-w-0 flex-1 truncate text-sm text-ink">
-                    {person.name ?? "Alguien"}
-                  </span>
+                  <Link
+                    href={userProfilePath(person.id)}
+                    className="profile-link min-w-0 flex-1 truncate rounded-sm text-sm text-ink outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                  >
+                    <span data-profile-label>{person.name ?? "Alguien"}</span>
+                  </Link>
                   {person.joinedLabel && (
                     <span className="font-mono text-[11px] text-faded">{person.joinedLabel}</span>
                   )}
@@ -311,9 +351,13 @@ export function OpenDayRow({
         <div className="flex min-w-[12rem] flex-1 flex-wrap items-center gap-2.5">
           {taken > 0 && <AvatarStack users={day.attendees} size={26} />}
           <span className={`text-sm ${taken > 0 ? "text-ink" : "text-faded"}`}>
-            {taken === 0
-              ? "Nadie todavía"
-              : `${nameList(names)} ${taken === 1 ? "viene" : "vienen"}`}
+            {taken === 0 ? (
+              "Nadie todavía"
+            ) : (
+              <>
+                <AttendeeNameList day={day} /> {taken === 1 ? "viene" : "vienen"}
+              </>
+            )}
           </span>
           <SpotsChip taken={taken} capacity={day.capacity} tone="neutral" />
         </div>

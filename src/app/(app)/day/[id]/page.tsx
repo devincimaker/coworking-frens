@@ -207,11 +207,11 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
         >
           <Link
             href={profileHref(day.host.id, userId)}
-            className="flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+            className="profile-link flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
           >
             <Avatar name={day.host.name} image={day.host.image} size={40} />
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-ink">
+              <div data-profile-label className="truncate text-sm font-semibold text-ink">
                 {isHost ? "Vos" : day.host.name}
               </div>
               <div className="font-mono text-[12px] text-faded">anfitrión</div>
@@ -267,11 +267,11 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
               <li key={att.user.id} className="panel flex flex-wrap items-center gap-3 p-2.5 sm:flex-nowrap">
                 <Link
                   href={profileHref(att.user.id, userId)}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                  className="profile-link flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
                 >
                   <Avatar name={att.user.name} image={att.user.image} size={32} />
                   <div className="min-w-0 text-sm font-medium text-ink">
-                    <span className="block truncate">{att.user.name}</span>
+                    <span data-profile-label className="block truncate">{att.user.name}</span>
                     {att.user.id === userId && (
                       <span className="font-mono text-[11px]" style={{ color: a.accent }}>
                         vos

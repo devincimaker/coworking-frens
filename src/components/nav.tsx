@@ -124,11 +124,11 @@ export function Sidebar({
       <div className="flex-1" />
 
       <div className="flex items-center gap-2.5 border-t border-line pt-4">
-        <Link href="/profile" className="flex min-w-0 flex-1 items-center gap-2.5">
+        <Link href="/profile" className="profile-link flex min-w-0 flex-1 items-center gap-2.5">
           <Avatar name={user.name ?? null} image={user.image ?? null} size={34} />
           <div className="min-w-0 leading-tight">
-            <div className="truncate text-sm font-semibold text-ink">{user.name ?? "Vos"}</div>
-            <div className="truncate font-mono text-[11px] text-faded">
+            <div data-profile-label className="truncate text-sm font-semibold text-ink">{user.name ?? "Vos"}</div>
+            <div data-profile-label className="truncate font-mono text-[11px] text-faded">
               @{user.username ?? "perfil"}
             </div>
           </div>

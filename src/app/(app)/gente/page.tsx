@@ -136,12 +136,12 @@ export default async function GentePage() {
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <Link
                         href={userProfilePath(person.id)}
-                        className="min-w-0 rounded-lg outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                        className="profile-link min-w-0 rounded-lg outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
                       >
-                        <h2 className="truncate font-display text-xl font-semibold tracking-tight text-ink">
+                        <h2 data-profile-label className="truncate font-display text-xl font-semibold tracking-tight text-ink">
                           {title}
                         </h2>
-                        <p className="truncate font-mono text-[12px] text-faded">
+                        <p data-profile-label className="truncate font-mono text-[12px] text-faded">
                           @{person.username}
                         </p>
                       </Link>
