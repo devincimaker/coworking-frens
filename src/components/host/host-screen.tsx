@@ -80,7 +80,7 @@ function InviteBlock({ inviteUrl }: { inviteUrl: string }) {
         <code className="min-w-0 flex-1 truncate rounded-[13px] border border-line bg-surface px-3.5 py-2.5 font-mono text-[13px] text-grape-deep">
           {inviteUrl}
         </code>
-        <CopyButton text={inviteUrl} label="Copiar link" className="bg-grape text-white" />
+        <CopyButton text={inviteUrl} label="Copiar link" className="bg-grape text-on-action" />
       </div>
     </section>
   );

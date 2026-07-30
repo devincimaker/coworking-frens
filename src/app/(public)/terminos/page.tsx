@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { TERMS_CONTACT_EMAIL, TERMS_UPDATED_AT, TERMS_VERSION } from "@/lib/terms";
 
 export const metadata: Metadata = {
@@ -55,14 +56,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-8 border-t border-[rgba(60,40,20,0.14)] pt-7">
+    <section id={id} className="scroll-mt-8 border-t border-rule pt-7">
       <h2 className="font-display text-[26px] leading-tight font-bold text-ink">
         <span className="mr-2.5 font-mono text-base font-semibold text-clay">
           {String(n).padStart(2, "0")}
         </span>
         {title}
       </h2>
-      <div className="mt-3 space-y-3 text-[15px] leading-7 font-medium text-[oklch(0.42_0.03_60)] [&_a]:font-semibold [&_a]:text-clay [&_a]:underline [&_li]:pl-1 [&_strong]:font-bold [&_strong]:text-ink [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
+      <div className="mt-3 space-y-3 text-[15px] leading-7 font-medium text-ink-600 [&_a]:font-semibold [&_a]:text-clay [&_a]:underline [&_li]:pl-1 [&_strong]:font-bold [&_strong]:text-ink [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
         {children}
       </div>
     </section>
@@ -71,21 +72,24 @@ function Section({
 
 export default function TerminosPage() {
   return (
-    <div className="min-h-dvh w-full bg-[radial-gradient(120%_80%_at_50%_-10%,#f1e9dc_0%,#e7dcca_55%,#ddd0bb_100%)] px-[22px] pb-16 text-ink">
+    <div className="page-wash min-h-dvh w-full px-[22px] pb-16 text-ink">
       <div className="mx-auto max-w-[820px]">
         <nav className="flex items-center justify-between px-1 py-6">
           <Link href="/" aria-label="Frens" className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-clay font-display text-[17px] font-bold text-white">
+            <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-clay font-display text-[17px] font-bold text-on-action">
               F
             </span>
             <span className="font-display text-[22px] font-bold text-ink">Frens</span>
           </Link>
-          <Link
-            href="/"
-            className="font-mono text-sm font-semibold text-faded transition-colors hover:text-ink"
-          >
-            Volver
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link
+              href="/"
+              className="font-mono text-sm font-semibold text-faded transition-colors hover:text-ink"
+            >
+              Volver
+            </Link>
+          </div>
         </nav>
 
         <header className="pt-8 pb-10">
@@ -95,21 +99,21 @@ export default function TerminosPage() {
           <h1 className="mt-3 text-balance font-display text-[clamp(2.5rem,6vw,3.75rem)] leading-[1.02] font-bold text-ink">
             Términos y Condiciones
           </h1>
-          <p className="mt-4 font-mono text-[13px] font-medium text-[oklch(0.5_0.03_60)]">
+          <p className="mt-4 font-mono text-[13px] font-medium text-ink-500">
             Versión {VERSION} · Última actualización: {LAST_UPDATED}
           </p>
         </header>
 
-        <div className="rounded-[22px] border border-[rgba(60,40,20,0.14)] bg-white/70 p-6">
+        <div className="rounded-[22px] border border-rule bg-surface/70 p-6">
           <h2 className="font-display text-xl font-bold text-ink">Resumen en criollo</h2>
-          <p className="mt-2 text-[15px] leading-7 font-medium text-[oklch(0.45_0.03_60)]">
+          <p className="mt-2 text-[15px] leading-7 font-medium text-ink-600">
             Frens es un tablón para coordinar días de trabajo en casas de amigos. No organizamos
             las juntadas, no revisamos las casas, no chequeamos quién es cada persona y no
             cobramos nada. Lo que pasa cuando entrás a la casa de alguien —o cuando dejás entrar
             gente a la tuya— es entre ustedes, bajo su responsabilidad y su riesgo. Si algo sale
             mal, no es responsabilidad de Frens ni de quien lo desarrolla.
           </p>
-          <p className="mt-3 text-[15px] leading-7 font-medium text-[oklch(0.45_0.03_60)]">
+          <p className="mt-3 text-[15px] leading-7 font-medium text-ink-600">
             Este resumen es orientativo y <strong className="font-bold text-ink">no</strong> forma
             parte del acuerdo: lo que vale es el texto completo de abajo.
           </p>
@@ -124,7 +128,7 @@ export default function TerminosPage() {
               <li key={item.id} className="text-[15px] leading-6 font-medium">
                 <a
                   href={`#${item.id}`}
-                  className="text-[oklch(0.45_0.03_60)] transition-colors hover:text-clay"
+                  className="text-ink-600 transition-colors hover:text-clay"
                 >
                   <span className="mr-2 font-mono text-[13px] text-clay">
                     {String(i + 1).padStart(2, "0")}
@@ -827,7 +831,7 @@ export default function TerminosPage() {
           </Section>
         </div>
 
-        <footer className="mt-14 border-t border-[rgba(60,40,20,0.14)] pt-8 text-center font-mono text-[13px] font-medium text-[oklch(0.5_0.03_60)]">
+        <footer className="mt-14 border-t border-rule pt-8 text-center font-mono text-[13px] font-medium text-ink-500">
           <p>
             Coworking Frens · Términos y Condiciones v{VERSION} · {LAST_UPDATED}
           </p>

@@ -1,4 +1,7 @@
 // Warm pastel avatar palette, matching the design mockup's people colors.
+// Deliberately literal rather than themed: a person's colour is computed from
+// their id, so it is identity, not decoration, and it must not shift when the
+// theme does. At avatar size these all read against paper and espresso alike.
 const PALETTE = [
   "oklch(0.70 0.13 40)",
   "oklch(0.80 0.12 80)",
@@ -27,7 +30,7 @@ export function Avatar({
   size?: number;
   ring?: boolean;
 }) {
-  const cls = `shrink-0 rounded-full ${ring ? "ring-2 ring-white" : ""}`;
+  const cls = `shrink-0 rounded-full ${ring ? "ring-2 ring-surface" : ""}`;
   if (image) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -43,7 +46,7 @@ export function Avatar({
   const initial = (name ?? "?").trim().charAt(0).toUpperCase();
   return (
     <div
-      className={`${cls} flex items-center justify-center font-semibold text-white`}
+      className={`${cls} flex items-center justify-center font-semibold text-avatar-ink`}
       style={{ width: size, height: size, backgroundColor: hue(name ?? "?"), fontSize: size * 0.42 }}
     >
       {initial}

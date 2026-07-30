@@ -119,7 +119,7 @@ function FeedJoinButton({
     );
   if (full)
     return (
-      <div className="mt-3 w-full rounded-[13px] bg-[oklch(0.92_0.005_70)] py-2.5 text-center text-sm font-semibold text-faded">
+      <div className="mt-3 w-full rounded-[13px] bg-disabled py-2.5 text-center text-sm font-semibold text-faded">
         Completo
       </div>
     );
@@ -127,7 +127,7 @@ function FeedJoinButton({
     <form action={joinDay} className="mt-3">
       <input type="hidden" name="dayId" value={day.id} />
       <button
-        className="w-full rounded-[13px] py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+        className="w-full rounded-[13px] py-2.5 text-sm font-semibold text-on-action transition-transform active:scale-[0.98]"
         style={{ backgroundColor: accent, boxShadow: `0 8px 16px -10px ${accent}` }}
       >
         Sumarme
@@ -174,7 +174,7 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
                 className="h-full w-full object-cover"
               />
               {day.place.photos && day.place.photos.length > 1 && (
-                <span className="absolute right-2 bottom-2 rounded-full bg-ink/70 px-2 py-1 font-mono text-[10px] font-semibold text-white backdrop-blur-sm">
+                <span className="absolute right-2 bottom-2 rounded-full bg-scrim/70 px-2 py-1 font-mono text-[10px] font-semibold text-on-scrim backdrop-blur-sm">
                   {day.place.photos.length} fotos
                 </span>
               )}

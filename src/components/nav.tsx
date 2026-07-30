@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/avatar";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type NavItem = {
   href: string;
@@ -87,7 +88,7 @@ export function Sidebar({
   return (
     <aside className="sticky top-0 hidden h-dvh w-[250px] shrink-0 flex-col gap-1 border-r border-line px-4 py-8 md:flex">
       <Link href="/juntadas" className="mb-6 flex items-center gap-2.5 px-2.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-clay font-display text-base font-bold text-white">
+        <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-clay font-display text-base font-bold text-on-action">
           F
         </span>
         <span className="font-display text-xl font-bold text-ink">Frens</span>
@@ -101,7 +102,7 @@ export function Sidebar({
             href={item.href}
             className={`flex items-center gap-3 rounded-[13px] px-3.5 py-3 text-[15px] font-semibold transition-colors ${
               active
-                ? "bg-[oklch(0.94_0.03_45)] text-[oklch(0.55_0.16_40)]"
+                ? "bg-clay-tint text-nav-active-ink"
                 : "text-faded hover:bg-amenity hover:text-ink"
             }`}
           >
@@ -112,7 +113,7 @@ export function Sidebar({
               unseenFriendRequestCount > 0 && (
                 <span
                   aria-label={`${unseenFriendRequestCount} pedidos de amistad nuevos`}
-                  className="ml-auto min-w-6 rounded-full bg-clay px-1.5 py-0.5 text-center font-mono text-[11px] font-semibold leading-5 text-white"
+                  className="ml-auto min-w-6 rounded-full bg-clay px-1.5 py-0.5 text-center font-mono text-[11px] font-semibold leading-5 text-on-action"
                 >
                   {unseenFriendRequestCount > 99 ? "99+" : unseenFriendRequestCount}
                 </span>
@@ -133,6 +134,7 @@ export function Sidebar({
             </div>
           </div>
         </Link>
+        <ThemeToggle />
         <form action={signOutAction}>
           <button
             title="Cerrar sesión"
@@ -177,7 +179,7 @@ export function BottomNav({
                 unseenFriendRequestCount > 0 && (
                   <span
                     aria-label={`${unseenFriendRequestCount} pedidos de amistad nuevos`}
-                    className="absolute -top-2 -right-3 min-w-4 rounded-full bg-clay px-1 text-center font-mono text-[9px] font-semibold leading-4 text-white ring-2 ring-paper"
+                    className="absolute -top-2 -right-3 min-w-4 rounded-full bg-clay px-1 text-center font-mono text-[9px] font-semibold leading-4 text-on-action ring-2 ring-paper"
                   >
                     {unseenFriendRequestCount > 9 ? "9+" : unseenFriendRequestCount}
                   </span>
@@ -199,14 +201,19 @@ export function MobileTopBar({
   return (
     <div className="flex items-center justify-between px-5 pt-6 pb-1 md:hidden">
       <Link href="/juntadas" className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-clay font-display text-sm font-bold text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-clay font-display text-sm font-bold text-on-action">
           F
         </span>
         <span className="font-display text-xl font-bold text-ink">Frens</span>
       </Link>
-      <Link href="/profile" aria-label="Perfil">
-        <Avatar name={user.name ?? null} image={user.image ?? null} size={36} />
-      </Link>
+      {/* Up here rather than in the tab bar: that bar is already four or five
+          items wide on a phone, and the theme is not a destination. */}
+      <div className="flex items-center gap-1.5">
+        <ThemeToggle />
+        <Link href="/profile" aria-label="Perfil">
+          <Avatar name={user.name ?? null} image={user.image ?? null} size={36} />
+        </Link>
+      </div>
     </div>
   );
 }

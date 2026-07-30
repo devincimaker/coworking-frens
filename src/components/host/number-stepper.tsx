@@ -32,7 +32,7 @@ export function NumberStepper({
   const atMax = value >= max;
 
   const buttonClass =
-    "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-surface text-base leading-none text-ink shadow-[0_1px_2px_rgba(60,40,20,0.12)] transition-transform active:scale-95 disabled:cursor-default disabled:opacity-45 disabled:shadow-none disabled:active:scale-100";
+    "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-surface text-base leading-none text-ink shadow-nub-sm transition-transform active:scale-95 disabled:cursor-default disabled:opacity-45 disabled:shadow-none disabled:active:scale-100";
 
   return (
     <div>

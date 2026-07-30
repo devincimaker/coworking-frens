@@ -200,7 +200,7 @@ export function DayComposer({
                   />
                   <span
                     title={isOpen ? "Ya tenés este día abierto" : undefined}
-                    className={`${pillBase} border-line text-faded peer-checked:border-clay peer-checked:bg-clay peer-checked:text-white peer-checked:shadow-[0_10px_22px_-12px_var(--color-clay)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-3 peer-focus-visible:outline-ink-900 ${
+                    className={`${pillBase} border-line text-faded peer-checked:border-clay peer-checked:bg-clay peer-checked:text-on-action peer-checked:shadow-[0_10px_22px_-12px_var(--color-clay)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-3 peer-focus-visible:outline-focus ${
                       isOpen ? "cursor-default opacity-45" : "hover:border-rule-hover hover:text-ink"
                     }`}
                   >
@@ -313,10 +313,10 @@ export function DayComposer({
             />
             <span
               aria-hidden="true"
-              className="relative block h-[27px] w-[46px] shrink-0 rounded-full bg-[oklch(0.85_0.01_70)] transition-colors peer-checked:bg-clay peer-focus-visible:outline-2 peer-focus-visible:outline-offset-3 peer-focus-visible:outline-ink-900"
+              className="relative block h-[27px] w-[46px] shrink-0 rounded-full bg-track transition-colors peer-checked:bg-clay peer-focus-visible:outline-2 peer-focus-visible:outline-offset-3 peer-focus-visible:outline-focus"
             >
               <span
-                className={`absolute top-[3px] h-[21px] w-[21px] rounded-full bg-white shadow-[0_1px_2px_rgba(60,40,20,0.2)] transition-[left] ${
+                className={`absolute top-[3px] h-[21px] w-[21px] rounded-full bg-knob shadow-nub transition-[left] ${
                   repeat ? "left-[22px]" : "left-[3px]"
                 }`}
               />

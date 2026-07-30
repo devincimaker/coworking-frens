@@ -23,7 +23,7 @@ const initialState: FormState = {
 };
 
 const iconButtonBaseClass =
-  "flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border shadow-[0_8px_18px_-16px_rgba(60,40,20,0.7)] outline-none transition-[background-color,border-color,color,transform] focus-visible:ring-2 focus-visible:ring-clay/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface active:scale-[0.96] disabled:cursor-default disabled:opacity-50 disabled:active:scale-100";
+  "flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border shadow-step outline-none transition-[background-color,border-color,color,transform] focus-visible:ring-2 focus-visible:ring-clay/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface active:scale-[0.96] disabled:cursor-default disabled:opacity-50 disabled:active:scale-100";
 const inactiveIconButtonClass =
   "border-line bg-surface/95 text-faded hover:bg-amenity hover:text-ink";
 const activeEditButtonClass = "border-ink bg-ink text-paper hover:bg-ink hover:text-paper";

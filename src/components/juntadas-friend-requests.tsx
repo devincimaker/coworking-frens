@@ -80,7 +80,7 @@ export function JuntadasFriendRequests({
   const batchPending = pendingRequestId !== null;
 
   return (
-    <section className="mb-7 overflow-hidden rounded-2xl bg-clay-tint shadow-[0_14px_34px_-28px_rgba(100,48,28,0.7)]">
+    <section className="mb-7 overflow-hidden rounded-2xl bg-clay-tint shadow-notice">
       <div className="flex items-center justify-between gap-4 px-4 pt-4 pb-3 sm:px-5">
         <h2 className="flex min-w-0 items-center gap-2.5 font-display text-lg font-semibold text-ink">
           <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-clay" />
@@ -151,7 +151,7 @@ export function JuntadasFriendRequests({
                   <input type="hidden" name="requestId" value={request.id} />
                   <button
                     disabled={batchPending}
-                    className="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-full bg-olive px-4 text-sm font-semibold text-white transition-[transform,background-color] active:scale-[0.98] disabled:cursor-default disabled:opacity-60 disabled:active:scale-100"
+                    className="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-full bg-olive px-4 text-sm font-semibold text-on-action transition-[transform,background-color] active:scale-[0.98] disabled:cursor-default disabled:opacity-60 disabled:active:scale-100"
                   >
                     {pending ? "Guardando…" : "Aceptar"}
                   </button>

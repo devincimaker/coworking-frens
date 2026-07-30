@@ -45,7 +45,7 @@ export function PlaceSummary({
                 className="h-full w-full object-cover"
               />
               {index === photos.length - 1 && extra > 0 && (
-                <span className="absolute inset-0 flex items-center justify-center bg-ink/55 font-mono text-[11px] font-semibold text-white">
+                <span className="absolute inset-0 flex items-center justify-center bg-scrim/55 font-mono text-[11px] font-semibold text-on-scrim">
                   +{extra}
                 </span>
               )}

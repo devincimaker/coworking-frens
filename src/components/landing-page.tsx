@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { todayBA } from "@/lib/tz";
 
 const APP_SIGNIN = "/signin?callbackUrl=%2Fjuntadas";
@@ -143,7 +144,7 @@ function AvatarStack({
       {people.map((person, i) => (
         <span
           key={`${person.initial}-${i}`}
-          className="flex items-center justify-center rounded-full font-semibold text-sheet"
+          className="flex items-center justify-center rounded-full font-semibold text-avatar-ink"
           style={{
             width: size,
             height: size,
@@ -167,19 +168,22 @@ export function LandingPage() {
         {/* NAV */}
         <nav className="flex items-center justify-between py-[22px]">
           <Link href="/" aria-label="Frens" className="group flex items-center gap-2.5 py-2">
-            <span className="flex h-[30px] w-[30px] items-center justify-center rounded-mark bg-coral-500 font-display text-base font-bold text-sheet transition-colors duration-[140ms] ease-[cubic-bezier(.2,.7,.3,1)] group-hover:bg-coral-600">
+            <span className="flex h-[30px] w-[30px] items-center justify-center rounded-mark bg-coral-500 font-display text-base font-bold text-on-action transition-colors duration-[140ms] ease-[cubic-bezier(.2,.7,.3,1)] group-hover:bg-coral-600">
               F
             </span>
             <span className="font-display text-[21px] font-bold tracking-[-.01em] text-ink-800 transition-colors duration-[140ms] ease-[cubic-bezier(.2,.7,.3,1)] group-hover:text-coral-600">
               Frens
             </span>
           </Link>
-          <Link
-            href={APP_SIGNIN}
-            className={`${CONTROL} bg-coral-500 px-5 py-3 text-sm text-sheet hover:bg-coral-600`}
-          >
-            Entrar
-          </Link>
+          <div className="flex items-center gap-1.5">
+            <ThemeToggle />
+            <Link
+              href={APP_SIGNIN}
+              className={`${CONTROL} bg-coral-500 px-5 py-3 text-sm text-on-action hover:bg-coral-600`}
+            >
+              Entrar
+            </Link>
+          </div>
         </nav>
 
         <main>
@@ -200,7 +204,7 @@ export function LandingPage() {
               </p>
               <Link
                 href={APP_SIGNIN}
-                className={`${CONTROL} mt-[34px] inline-block bg-coral-500 px-7 py-[15px] text-base text-sheet shadow-coral hover:bg-coral-600`}
+                className={`${CONTROL} mt-[34px] inline-block bg-coral-500 px-7 py-[15px] text-base text-on-action shadow-coral hover:bg-coral-600`}
               >
                 Entrar a Frens
               </Link>
@@ -272,10 +276,10 @@ export function LandingPage() {
               ))}
             </div>
 
-            <div className="relative mt-[18px] overflow-hidden rounded-feature bg-coral-500 px-[clamp(26px,4vw,54px)] py-[clamp(34px,4.4vw,54px)] shadow-coral-lg">
+            <div className="relative mt-[18px] overflow-hidden [--color-focus:var(--color-focus-on-action)] rounded-feature bg-coral-500 px-[clamp(26px,4vw,54px)] py-[clamp(34px,4.4vw,54px)] shadow-coral-lg">
               <div
                 aria-hidden
-                className="pointer-events-none absolute -top-[18px] right-[clamp(-10px,1vw,24px)] font-display text-[clamp(120px,16vw,200px)] leading-none font-bold text-sheet/[.11] select-none"
+                className="pointer-events-none absolute -top-[18px] right-[clamp(-10px,1vw,24px)] font-display text-[clamp(120px,16vw,200px)] leading-none font-bold text-on-action/[.11] select-none"
               >
                 04
               </div>
@@ -283,13 +287,13 @@ export function LandingPage() {
                 {/* Same mono-caps treatment as <Eyebrow>, so the page's two
                     kicker styles read as one device. Only the colour differs —
                     this one sits on coral. */}
-                <p className="font-mono text-[11px] leading-[1.2] font-medium tracking-[.14em] text-sheet">
+                <p className="font-mono text-[11px] leading-[1.2] font-medium tracking-[.14em] text-on-action">
                   LA QUE FALTA
                 </p>
-                <h3 className="mt-3.5 text-balance font-display text-[clamp(26px,3.6vw,44px)] leading-[1.08] font-bold tracking-[-.024em] text-sheet">
+                <h3 className="mt-3.5 text-balance font-display text-[clamp(26px,3.6vw,44px)] leading-[1.08] font-bold tracking-[-.024em] text-on-action">
                   Falta una cuarta: la casa de un amigo.
                 </h3>
-                <p className="mt-3.5 max-w-[480px] text-pretty text-[clamp(16px,1.5vw,18px)] leading-[1.55] text-sheet">
+                <p className="mt-3.5 max-w-[480px] text-pretty text-[clamp(16px,1.5vw,18px)] leading-[1.55] text-on-action">
                   La casa siempre estuvo. Lo que falta es que juntarse sea fácil todas las semanas.
                   Que sea un plan fijo y no algo que alguien tiene que salir a organizar cada vez.
                 </p>
@@ -344,7 +348,7 @@ export function LandingPage() {
                   <div className="px-[22px] pt-5 pb-6">
                     <div className="flex items-center gap-[9px]">
                       <span
-                        className="flex h-[26px] w-[26px] items-center justify-center rounded-full text-[11px] font-semibold text-sheet"
+                        className="flex h-[26px] w-[26px] items-center justify-center rounded-full text-[11px] font-semibold text-avatar-ink"
                         style={{ background: house.accent }}
                       >
                         {house.initial}
@@ -427,17 +431,17 @@ export function LandingPage() {
           </section>
 
           {/* CTA FINAL */}
-          <section className="mt-[18px] rounded-feature bg-coral-500 px-[clamp(24px,4vw,48px)] py-[clamp(52px,7vw,86px)] text-center shadow-coral-lg">
-            <h2 className="text-balance font-display text-[clamp(30px,4.8vw,58px)] leading-[1.03] font-bold tracking-[-.03em] text-sheet">
+          <section className="mt-[18px] [--color-focus:var(--color-focus-on-action)] rounded-feature bg-coral-500 px-[clamp(24px,4vw,48px)] py-[clamp(52px,7vw,86px)] text-center shadow-coral-lg">
+            <h2 className="text-balance font-display text-[clamp(30px,4.8vw,58px)] leading-[1.03] font-bold tracking-[-.03em] text-on-action">
               Menos coordinación. Más juntarse.
             </h2>
-            <p className="mx-auto mt-[18px] mb-8 max-w-[480px] text-pretty text-[clamp(16px,1.6vw,19px)] leading-[1.55] text-sheet">
+            <p className="mx-auto mt-[18px] mb-8 max-w-[480px] text-pretty text-[clamp(16px,1.6vw,19px)] leading-[1.55] text-on-action">
               Entrá, buscá a tus amigos, y que la primera juntada la abra el que tenga la casa más
               cómoda.
             </p>
             <Link
               href={APP_SIGNIN}
-              className={`${CONTROL} inline-block bg-sheet px-[34px] py-4 text-base text-coral-600 hover:bg-coral-100 hover:text-coral-700`}
+              className={`${CONTROL} inline-block bg-action-surface px-[34px] py-4 text-base text-action-surface-ink hover:bg-action-surface-hover hover:text-action-surface-ink-hover`}
             >
               Entrar a Frens
             </Link>
