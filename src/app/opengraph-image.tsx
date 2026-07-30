@@ -11,7 +11,8 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 // Brand tokens resolved to sRGB: satori has no OKLCH, and these must not drift
-// from src/app/globals.css.
+// from src/app/globals.css. Always the light palette — this renders to a PNG on
+// the server, where there is no viewer and so no theme to read.
 const SAND = "#efe7da";
 const SHEET = "#fffdfa";
 const INK = "#211c17";

@@ -100,7 +100,7 @@ export function PlacePhotoField({
   }
 
   const overlayButtonClass =
-    "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-ink/70 text-white backdrop-blur-sm transition-transform active:scale-95 disabled:opacity-40 disabled:active:scale-100";
+    "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-scrim/70 text-on-scrim backdrop-blur-sm transition-transform active:scale-95 disabled:opacity-40 disabled:active:scale-100";
 
   return (
     <div>
@@ -140,7 +140,7 @@ export function PlacePhotoField({
         }}
         onDrop={handleDrop}
         className={`rounded-[20px] border border-dashed p-3 transition-colors ${
-          dragging ? "border-clay bg-[oklch(0.96_0.03_45)]" : "border-rule-strong bg-paper"
+          dragging ? "border-clay bg-clay-tint" : "border-rule-strong bg-paper"
         }`}
       >
         {urls.length === 0 && !pending ? (
@@ -173,7 +173,7 @@ export function PlacePhotoField({
                     className="h-full w-full object-cover"
                   />
                   <div className="absolute inset-x-2 top-2 flex items-start justify-between gap-1">
-                    <span className="rounded-full bg-ink/70 px-2 py-1 font-mono text-[10px] font-semibold text-white backdrop-blur-sm">
+                    <span className="rounded-full bg-scrim/70 px-2 py-1 font-mono text-[10px] font-semibold text-on-scrim backdrop-blur-sm">
                       {index === 0 ? "portada" : index + 1}
                     </span>
                     <button

@@ -64,7 +64,7 @@ function AttendeeFriendControl({
       <div className="flex shrink-0 items-center gap-1.5">
         <form action={acceptFriendRequest}>
           <input type="hidden" name="requestId" value={state.requestId} />
-          <button className="rounded-full bg-olive px-2.5 py-1 font-mono text-[11px] font-medium text-white">
+          <button className="rounded-full bg-olive px-2.5 py-1 font-mono text-[11px] font-medium text-on-action">
             aceptar
           </button>
         </form>
@@ -98,7 +98,7 @@ function AttendeeFriendControl({
     <form action={sendFriendRequestFromDay}>
       <input type="hidden" name="dayId" value={dayId} />
       <input type="hidden" name="recipientId" value={attendeeId} />
-      <button className="rounded-full border border-clay/30 px-2.5 py-1 font-mono text-[11px] font-medium text-clay hover:bg-clay hover:text-white">
+      <button className="rounded-full border border-clay/30 px-2.5 py-1 font-mono text-[11px] font-medium text-clay hover:bg-clay hover:text-on-action">
         sumar amigo
       </button>
     </form>
@@ -165,6 +165,9 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
             [ foto de la casa ]
           </div>
         )}
+        {/* Untokenised on purpose: a photograph is dark in both themes, so its
+            scrim is already correct at night and must not follow --color-ink,
+            which inverts to near-white and would erase the title below. */}
         <div className="absolute inset-0 bg-gradient-to-t from-[rgba(28,20,14,0.55)] to-transparent to-55%" />
         <Link
           href="/juntadas"
@@ -175,7 +178,7 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </Link>
-        <div className="absolute inset-x-5 bottom-4 text-white">
+        <div className="absolute inset-x-5 bottom-4 text-on-scrim">
           <h1 className="font-display text-2xl leading-tight font-bold">{day.place.nickname}</h1>
           {mapsHref ? (
             <a
@@ -366,14 +369,14 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
                 </button>
               </form>
             ) : left <= 0 ? (
-              <div className="w-full rounded-2xl bg-[oklch(0.92_0.005_70)] py-3.5 text-center text-base font-semibold text-faded">
+              <div className="w-full rounded-2xl bg-disabled py-3.5 text-center text-base font-semibold text-faded">
                 Completo
               </div>
             ) : (
               <form action={joinDay}>
                 <input type="hidden" name="dayId" value={day.id} />
                 <button
-                  className="w-full rounded-2xl py-3.5 text-base font-semibold text-white transition-transform active:scale-[0.99]"
+                  className="w-full rounded-2xl py-3.5 text-base font-semibold text-on-action transition-transform active:scale-[0.99]"
                   style={{ backgroundColor: a.accent, boxShadow: `0 12px 24px -12px ${a.accent}` }}
                 >
                   Sumarme

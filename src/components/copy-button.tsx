@@ -5,7 +5,7 @@ import { useState } from "react";
 export function CopyButton({
   text,
   label = "Copiar",
-  className = "bg-white text-grape-deep",
+  className = "bg-action-surface text-action-surface-ink-grape",
 }: {
   text: string;
   label?: string;

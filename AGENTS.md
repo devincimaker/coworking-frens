@@ -47,9 +47,42 @@ imports it with `@AGENTS.md`; keep shared guidance here instead of duplicating i
   worktree branch, and open a PR. Merge only when the user asks, then run cleanup
   from the primary checkout.
 
+## Theming
+
+- The app ships light and dark. Dark is one `:root[data-theme="dark"]` block in
+  `src/app/globals.css` that redefines only *base* tokens; every component reads
+  through `var()`, so components carry no dark-specific code. Add a token there
+  rather than a `dark:` variant.
+- Style with tokens, never literal colours. A hardcoded `rgba()`/`oklch()`/hex,
+  or `bg-white`/`text-white`, cannot be themed and will be wrong in one mode.
+- **Clay, coral, olive and grape brighten at night, so text on them inverts.**
+  Use `text-on-action`; it flips to dark paper in the dark block. It has to:
+  white on dark-mode clay measures 3.06:1, olive 2.70 and grape 2.53, all below
+  the 4.5:1 floor, where dark paper reads 6.04 / 6.84 / 7.31.
+- Three things sit on those fills and still must *not* flip, each with its own
+  fixed token, all deliberately absent from the dark block:
+  - `bg-action-surface` + `text-action-surface-ink` — a pale surface laid on a
+    brand fill, like the CTA pill on the landing's coral band. The band stays
+    coral, so the pill stays pale.
+  - `text-on-scrim` — anything over a photo. Photos are dark in both modes, so
+    the scrim only deepens. Pair with `bg-scrim/70`, never `bg-ink/70`:
+    `--color-ink` inverts to near-white at night.
+  - `text-avatar-ink` — an initial on one of the eight identity colours, which
+    are themselves the same in both modes.
+- Tailwind inlines a `--shadow-*` token's value into the utility, so a shadow
+  colour has to sit behind its own var. Compose shadows from `--shadow-tint-*`.
+  The same applies to geometry when a shadow has to be re-cut rather than just
+  re-tinted — see `--shadow-surface-geometry`, which the card uses to trade the
+  day's short drop for a longer one that anchors on espresso.
+- Inline styles beat every stylesheet, so values that reach the DOM that way
+  need themable parts: `src/lib/accent.ts` builds its `oklch()` from `--accent-*`
+  and only fixes the hue, which is a person's identity.
+
 ## Verification
 
 - Run the narrowest relevant tests during development, then `npm test` and
   `npm run lint` before handing off a substantial change.
 - For browser checks, get the current checkout's URL from `npm run wt:list` rather
   than assuming the primary checkout URL.
+- Check both themes. Toggling is in the sidebar, the mobile top bar, the landing
+  nav and the auth shell; `localStorage.frens-theme` persists an explicit choice.

@@ -43,7 +43,7 @@ export default async function OnboardingPage({
   return (
     <div className="pt-8">
       <div className="mb-5 flex items-center justify-center gap-2.5">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-clay font-display text-xl font-bold text-white">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-clay font-display text-xl font-bold text-on-action">
           F
         </span>
         <span className="font-display text-3xl font-bold tracking-tight text-ink">Frens</span>

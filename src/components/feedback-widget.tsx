@@ -107,7 +107,7 @@ export function FeedbackWidget({
       {open && (
         <section
           id={panelId}
-          className={`absolute right-0 bottom-[calc(100%+8px)] w-[min(calc(100vw-2rem),22rem)] overflow-y-auto rounded-2xl border border-line bg-surface shadow-[0_24px_70px_-34px_rgba(43,38,32,0.65)] md:max-h-[calc(100dvh-5.5rem)] ${panelHeight}`}
+          className={`absolute right-0 bottom-[calc(100%+8px)] w-[min(calc(100vw-2rem),22rem)] overflow-y-auto rounded-2xl border border-line bg-surface shadow-panel md:max-h-[calc(100dvh-5.5rem)] ${panelHeight}`}
           aria-label="Enviar feedback"
         >
           <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface px-4 py-3.5">
@@ -140,7 +140,7 @@ export function FeedbackWidget({
 
           {submitState === "sent" ? (
             <div className="px-5 py-8 text-center">
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-olive text-white">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-olive text-on-action">
                 <svg
                   width="20"
                   height="20"
@@ -210,7 +210,7 @@ export function FeedbackWidget({
         onClick={toggleOpen}
         aria-expanded={open}
         aria-controls={panelId}
-        className="flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-paper shadow-[0_18px_36px_-20px_rgba(43,38,32,0.85)] transition-transform hover:-translate-y-0.5 active:translate-y-0"
+        className="flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-paper shadow-pill transition-transform hover:-translate-y-0.5 active:translate-y-0"
       >
         <svg
           width="17"

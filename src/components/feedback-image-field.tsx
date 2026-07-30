@@ -82,7 +82,7 @@ export function FeedbackImageField({
               type="button"
               title="Quitar imagen"
               aria-label="Quitar imagen"
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-ink/80 text-lg leading-none text-white backdrop-blur-sm transition-transform active:scale-95 disabled:opacity-50"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-scrim/80 text-lg leading-none text-on-scrim backdrop-blur-sm transition-transform active:scale-95 disabled:opacity-50"
               disabled={disabled || uploading}
               onClick={() => {
                 onChange("");

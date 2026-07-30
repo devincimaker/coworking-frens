@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Frens themes by flipping tokens, not by writing per-component dark variants,
+   so `dark:` should be rare — reach for it only where an element genuinely has
+   to differ rather than merely recolour: the theme toggle showing a moon by day
+   and a sun by night, and little else. Rebound onto data-theme because the
+   theme is an explicit, persisted choice, not only an OS preference. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
   --color-paper: #faf6ef;
   --color-surface: #ffffff;
@@ -16,6 +23,77 @@
   --color-grape-deep: oklch(0.55 0.14 315);
   --color-amenity: oklch(0.95 0.012 75);
   --color-amenity-ink: oklch(0.44 0.03 65);
+
+  /* The two reds the app actually ships, in .btn-danger. */
+  --color-danger: oklch(0.55 0.13 25);
+  --color-danger-tint: oklch(0.95 0.03 25);
+
+  /* Text on a brand *fill* — a clay button, an olive chip, a host accent.
+     This one flips. Clay brightens from 0.6 to 0.68 at night to hold its own
+     against espresso, and once it does, white on it falls to 3.05:1 (olive
+     2.70, grape 2.54 — both below even the large-text floor). Paper-dark on
+     those same fills reads 6.08 / 6.86 / 7.30, so the ink inverts with them.
+     The DS calls this --text-inverse. */
+  --color-on-action: #ffffff;
+
+  /* ── The fixed island ────────────────────────────────────────────────────
+     A *surface* laid on top of a brand fill — the sheet-white pill on the
+     coral band — is the thing that must not flip, or it inverts itself off
+     its own background: the band stays coral, so the pill stays pale and its
+     text stays coral. These are deliberately absent from the
+     [data-theme="dark"] block below; that absence is the mechanism. */
+  --color-action-surface: #fffdfa;
+  --color-action-surface-hover: oklch(0.94 0.04 40);
+  --color-action-surface-ink: oklch(0.5 0.16 40);
+  --color-action-surface-ink-hover: oklch(0.42 0.16 40);
+  /* Grape's twin. --color-grape-deep itself has to brighten, because it also
+     labels the invite link on a card that goes dark; this is the copy button
+     that sits on the grape panel, where it must not. */
+  --color-action-surface-ink-grape: oklch(0.55 0.14 315);
+
+  /* A photograph is dark in both themes, so a scrim over one only ever
+     deepens — it never inverts — and the chips floating on it stay light.
+     Pinned rather than following --color-ink, which goes near-white at night,
+     and kept off --color-on-action, which now flips. */
+  --color-scrim: #2b2620;
+  --color-on-scrim: #ffffff;
+
+  /* An avatar's initial sits on one of eight identity colours that are the
+     same in both themes (see rule 4), so it does not flip either. */
+  --color-avatar-ink: #ffffff;
+
+  /* ── The /friends invite panel ───────────────────────────────────────────
+     By day this is a saturated grape marquee. It cannot stay one at night:
+     --color-grape-deep does double duty, a *darker* fill by day (0.55) and a
+     *brighter* text colour at night (0.80, which is what the DS uses it for),
+     so the gradient inverts and a panel painted with it glares against
+     espresso. At night it becomes the same quiet wash /host's invite block
+     already uses, and its contents stop being "on a fill" and start being
+     "on a surface". Everything below flips as a set. */
+  --color-invite-ink: #ffffff;
+  --color-invite-chip: rgba(255, 255, 255, 0.15);
+  --color-invite-chip-ink: var(--color-invite-ink);
+  --color-invite-action: var(--color-action-surface);
+  --color-invite-action-ink: var(--color-action-surface-ink-grape);
+
+  /* States that are neither a surface nor an action. "Full" is not disabled:
+     it is a flat block with faded text reading Completo. */
+  --color-disabled: oklch(0.92 0.005 70);
+  --color-track: oklch(0.85 0.01 70);
+  --color-knob: #ffffff;
+  --color-nav-active-ink: oklch(0.55 0.16 40);
+
+  /* Keyboard focus. Its own token rather than borrowing --color-ink-900,
+     because the ring is judged against the ground it lands on, not against
+     body text, and those two want different amounts at night. */
+  --color-focus: #211c17;
+  /* Coral and clay fills are the same in both themes, so a ring landing on one
+     is too — see the fixed island above. */
+  --color-focus-on-action: #211c17;
+
+  --color-selection: oklch(0.9 0.06 45);
+  /* Paints the overscroll gutter, so it matches the page wash's midpoint. */
+  --color-root: #e7dcca;
 
   --font-display: var(--font-bricolage);
   --font-body: var(--font-instrument);
@@ -78,13 +156,36 @@
   --radius-panel: 20px;
   --radius-feature: 24px;
 
-  /* Elevation — warm-brown alpha, never grey. */
-  --shadow-chip: 0 6px 16px -8px rgba(60, 40, 20, 0.6);
-  --shadow-card: 0 16px 36px -28px rgba(60, 40, 20, 0.7);
-  --shadow-float: 0 26px 50px -24px rgba(60, 40, 20, 0.65);
-  --shadow-hero: 0 40px 80px -40px rgba(60, 40, 20, 0.6);
+  /* Elevation — warm-brown alpha, never grey.
+
+     Every colour here is a var(), never a literal: Tailwind resolves a
+     --shadow-* token at build time and inlines its text into the utility, so
+     a literal rgba() baked into one of these could never be themed. Putting
+     the colour behind --shadow-tint-* (declared on :root below) is what lets
+     these flip — the same trick --shadow-coral has always relied on. */
+  --shadow-chip: 0 6px 16px -8px var(--shadow-tint-md);
+  --shadow-card: 0 16px 36px -28px var(--shadow-tint-xl);
+  --shadow-float: 0 26px 50px -24px var(--shadow-tint-lg);
+  --shadow-hero: 0 40px 80px -40px var(--shadow-tint-md);
+  /* Both track --color-coral-500, so they brighten with it at night for free. */
   --shadow-coral: 0 14px 30px -14px var(--color-coral-500);
   --shadow-coral-lg: 0 32px 62px -34px var(--color-coral-500);
+
+  /* The rest of the app's elevation, lifted out of the arbitrary
+     shadow-[...] values it was written in so that it has somewhere to flip to.
+     Geometry is unchanged; only the colour moves between themes. */
+  /* The card. Its geometry is behind a var as well as its colour, because this
+     is the one shadow the DS re-cuts for dark rather than merely re-tinting:
+     on espresso a 28px blur at -22px inset all but disappears, so night gets a
+     longer, softer drop that anchors the card without pretending to lift it. */
+  --shadow-surface: var(--shadow-surface-geometry) var(--shadow-tint-base);
+  --shadow-shell: 0 0 90px var(--shadow-tint-shell);
+  --shadow-panel: 0 24px 70px -34px var(--shadow-tint-ink);
+  --shadow-pill: 0 18px 36px -20px var(--shadow-tint-ink-strong);
+  --shadow-notice: 0 14px 34px -28px var(--shadow-tint-clay);
+  --shadow-step: 0 8px 18px -16px var(--shadow-tint-xl);
+  --shadow-nub: 0 1px 2px var(--shadow-tint-sm);
+  --shadow-nub-sm: 0 1px 2px var(--shadow-tint-xs);
 }
 
 /* The mobile tab bar's own height, home indicator included. Anything that has
@@ -92,10 +193,212 @@
    here, so the safe area is counted once instead of once per element. */
 :root {
   --bottom-nav-h: calc(3.0625rem + max(0.75rem, env(safe-area-inset-bottom)));
+
+  /* The page washes. Not in @theme: Tailwind has no background-image namespace
+     to hang them off, so they are plain properties consumed by .page-wash /
+     .shell-wash below. */
+  --page-wash: radial-gradient(120% 80% at 50% -10%, #f1e9dc 0%, #e7dcca 55%, #ddd0bb 100%);
+  --shell-wash: radial-gradient(120% 90% at 50% -10%, #f1e9dc 0%, #e7dcca 60%, #ddd0bb 100%);
+  --invite-wash: linear-gradient(135deg, var(--color-grape), var(--color-grape-deep));
+
+  /* The per-person accent, in parts. src/lib/accent.ts assembles these into an
+     oklch() with a hue it derives from someone's id, so the theme can move how
+     light and saturated an accent is without touching whose it is. Values here
+     are the originals from that file. */
+  --accent-l: 0.6;
+  --accent-c: 0.15;
+  --accent-tint-l: 0.93;
+  --accent-tint-c: 0.05;
+  --accent-tint-b-l: 0.9;
+  --accent-tint-b-c: 0.065;
+  --accent-soft-l: 0.96;
+  --accent-soft-c: 0.02;
+
+  --shadow-surface-geometry: 0 10px 28px -22px;
+
+  /* What the shadows above are actually made of. Warm brown by day. */
+  --shadow-tint-xs: rgba(60, 40, 20, 0.12);
+  --shadow-tint-sm: rgba(60, 40, 20, 0.2);
+  --shadow-tint-shell: rgba(60, 40, 20, 0.14);
+  --shadow-tint-base: rgba(60, 40, 20, 0.5);
+  --shadow-tint-md: rgba(60, 40, 20, 0.6);
+  --shadow-tint-lg: rgba(60, 40, 20, 0.65);
+  --shadow-tint-xl: rgba(60, 40, 20, 0.7);
+  --shadow-tint-ink: rgba(43, 38, 32, 0.65);
+  --shadow-tint-ink-strong: rgba(43, 38, 32, 0.85);
+  --shadow-tint-clay: rgba(100, 48, 28, 0.7);
+
+  /* Inherited by form controls, scrollbars and the Google Maps web component,
+     which renders its own internal UI and has no other way to be told. */
+  color-scheme: light;
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────
+   Frens is a warm-paper brand, so night is espresso — a dark clay, never a
+   neutral grey and never pure black.
+
+   This block redefines only *base* tokens. Every component, utility and
+   shadow above reads through var(), so nothing else in the codebase carries
+   dark-specific code. Four rules:
+
+     1. Surfaces climb in lightness instead of casting shadow. Shadows only
+        anchor at night, they never lift.
+     2. Clay and coral *brighten*, and their hover goes lighter, not darker.
+        Because they brighten, --color-on-action inverts to paper along with
+        them; white would no longer clear 3:1 on any of them.
+     3. Hairlines invert to warm light-on-dark, at lower opacity than their
+        light twins.
+     4. The solid host accents never change — as small avatar fills they read
+        correctly on both. Their -soft tints are surfaces, so those do flip.
+
+   :root[data-theme] rather than [data-theme] so it outweighs the :root that
+   @theme emits regardless of source order. Set the attribute on <html>, or on
+   any element to run one dark section inside a light page. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces climb in lightness instead of casting shadow. */
+  --color-paper: oklch(0.19 0.014 45);
+  --color-surface: oklch(0.235 0.016 48);
+  /* Raised above --color-surface, not below it: at night a tile stacked on a
+     card gets *lighter*, the same way it got whiter by day. */
+  --color-cream: oklch(0.275 0.016 50);
+  --color-amenity: oklch(0.28 0.014 55);
+  --color-amenity-ink: oklch(0.78 0.02 65);
+
+  /* Text: warm off-white, never pure #fff — it glares against clay. */
+  --color-ink: oklch(0.94 0.018 75);
+  --color-faded: oklch(0.665 0.018 68);
+
+  /* Inverts with the fills it sits on — see the note beside its light value.
+     Not the scrim's ink and not the avatar's, both of which stay light. */
+  --color-on-action: oklch(0.19 0.014 45);
+  /* A scrim only deepens; --color-on-scrim stays white. */
+  --color-scrim: #0c0a08;
+
+  --color-line: rgba(255, 240, 220, 0.13);
+
+  /* Clay brightens so it still carries contrast; hover goes LIGHTER. */
+  --color-clay: oklch(0.68 0.15 44);
+  --color-clay-deep: oklch(0.755 0.145 46);
+  --color-clay-tint: oklch(0.315 0.048 42);
+  --color-olive: oklch(0.685 0.115 148);
+  --color-grape: oklch(0.725 0.13 295);
+  --color-grape-deep: oklch(0.8 0.12 300);
+  --color-danger: oklch(0.72 0.14 25);
+  --color-danger-tint: oklch(0.3 0.055 25);
+
+  /* Sand — the paper the whole product sits on. */
+  --color-sand-50: oklch(0.205 0.014 45);
+  --color-sand-100: oklch(0.225 0.015 46);
+  --color-sand-200: oklch(0.245 0.015 47);
+  --color-sand-300: oklch(0.19 0.014 45);
+  --color-sand-400: oklch(0.265 0.016 48);
+  --color-sheet: oklch(0.245 0.016 49);
+
+  --color-ink-900: oklch(0.95 0.018 75);
+  --color-ink-800: oklch(0.93 0.018 75);
+  --color-ink-700: oklch(0.885 0.018 73);
+  --color-ink-600: oklch(0.8 0.018 70);
+  --color-ink-500: oklch(0.72 0.018 68);
+  --color-ink-400: oklch(0.66 0.018 66);
+  --color-ink-300: oklch(0.6 0.016 64);
+
+  --color-coral-700: oklch(0.82 0.12 48);
+  --color-coral-600: oklch(0.755 0.145 46);
+  --color-coral-500: oklch(0.68 0.15 44);
+  --color-coral-200: oklch(0.38 0.07 42);
+  --color-coral-100: oklch(0.315 0.048 42);
+
+  /* The five solid host accents are absent on purpose — see rule 4. Only the
+     -soft tints move, because those are surfaces, and a 0.94 pastel slab on a
+     dark card reads as a hole punched in the page. */
+  --color-host-violet-soft: oklch(0.31 0.05 300);
+  --color-host-blue-soft: oklch(0.3 0.05 250);
+  --color-host-green-soft: oklch(0.29 0.055 150);
+  --color-host-amber-soft: oklch(0.3 0.05 90);
+  --color-host-green-deep: oklch(0.78 0.13 150);
+
+  --color-rule-soft: rgba(255, 240, 220, 0.075);
+  --color-rule: rgba(255, 240, 220, 0.13);
+  --color-rule-strong: rgba(255, 240, 220, 0.26);
+  --color-rule-hover: rgba(255, 240, 220, 0.45);
+
+  --color-disabled: oklch(0.255 0.008 60);
+  --color-track: oklch(0.34 0.01 60);
+  --color-knob: oklch(0.93 0.012 70);
+  --color-nav-active-ink: oklch(0.815 0.13 46);
+
+  /* Bright-on-dark blooms in a way dark-on-light does not, so the same ratio
+     that reads as a crisp hairline by day reads as a halo at night: ink-900
+     against espresso is 14.96:1. This clears 8:1 on every surface in the app —
+     still far past the 3:1 the criterion asks — without the glare.
+     --color-focus-on-action stays put; a ring on coral still needs the dark. */
+  --color-focus: oklch(0.86 0.02 70);
+
+  /* The same wash as a chosen chip, so a selection reads as the app's own
+     highlight rather than a second, brighter orange. */
+  --color-selection: oklch(0.315 0.048 42);
+  --color-root: #1f1a15;
+
+  /* An accent brightens exactly as clay does, and for the same reason: it has
+     to carry contrast against espresso, both as a label on a card and as a fill
+     under --color-on-action. Its two stripe tints stop being pastel washes and
+     become dark ones — at 0.93 the photo placeholder reads as a hole cut in the
+     card rather than an absence of photo. Chroma eases back a little because
+     the same amount of colour goes further on a dark ground. */
+  --accent-l: 0.68;
+  --accent-tint-l: 0.3;
+  --accent-tint-c: 0.045;
+  --accent-tint-b-l: 0.265;
+  --accent-tint-b-c: 0.055;
+  --accent-soft-l: 0.275;
+  --accent-soft-c: 0.025;
+
+  /* --color-action-surface*, --color-on-scrim, --color-avatar-ink: absent. */
+
+  /* Shadows stop doing the work of elevation, so they only anchor, never
+     lift. Warm brown stops reading as shadow on espresso, so the tint goes
+     black and the alphas climb to compensate. Only the tints move — the
+     geometry in every --shadow-* token above is untouched, and the two coral
+     glows are absent because that hue is the brand. */
+  --shadow-tint-xs: rgba(0, 0, 0, 0.4);
+  --shadow-tint-sm: rgba(0, 0, 0, 0.5);
+  --shadow-tint-shell: rgba(0, 0, 0, 0.5);
+  --shadow-tint-base: rgba(0, 0, 0, 0.8);
+  --shadow-tint-md: rgba(0, 0, 0, 0.85);
+  --shadow-tint-lg: rgba(0, 0, 0, 0.9);
+  --shadow-tint-xl: rgba(0, 0, 0, 0.95);
+  --shadow-tint-ink: rgba(0, 0, 0, 0.95);
+  --shadow-tint-ink-strong: rgba(0, 0, 0, 0.95);
+  --shadow-tint-clay: rgba(0, 0, 0, 0.9);
+
+  --shadow-surface-geometry: 0 18px 40px -24px;
+
+  --page-wash: radial-gradient(120% 80% at 50% -10%, #2a231c 0%, #1f1a15 55%, #171310 100%);
+  --shell-wash: radial-gradient(120% 90% at 50% -10%, #2a231c 0%, #1f1a15 60%, #171310 100%);
+
+  /* A wash, not a fill — see the note beside the light values. The panel and
+     everything on it move together: the chip becomes a real surface and its
+     text the brightened grape, and the copy button takes over as the one
+     saturated thing in the block.
+
+     Written as literal stops rather than color-mix(grape 16%, surface): the
+     build emits a static fallback for color-mix outside @supports, and it
+     resolves the vars against their *light* values, so the fallback landed a
+     near-white lavender inside the dark block. These are that mix, precomputed
+     — surface's lightness carried 16% and 9% of the way toward grape, at
+     grape's hue rather than the near-neutral one surface interpolates through. */
+  --invite-wash: linear-gradient(135deg, oklch(0.313 0.035 300), oklch(0.279 0.026 300));
+  --color-invite-ink: var(--color-ink);
+  --color-invite-chip: var(--color-surface);
+  --color-invite-chip-ink: var(--color-grape-deep);
+  --color-invite-action: var(--color-grape);
+  --color-invite-action-ink: var(--color-on-action);
 }
 
 html {
-  background: #e7dcca;
+  background: var(--color-root);
 }
 
 body {
@@ -106,7 +409,7 @@ body {
 }
 
 ::selection {
-  background: oklch(0.9 0.06 45);
+  background: var(--color-selection);
 }
 
 /* Motion is feedback here, never decoration — the press on a button, the tint
@@ -125,16 +428,40 @@ body {
 
 /* Keyboard focus. The UA default is Chrome blue on a warm sand palette; this
    keeps the indicator in the brand's ink and clears 3:1 against every surface
-   it lands on, coral included. Pointer focus is untouched. */
-:focus-visible {
-  outline: 2px solid var(--color-ink-900);
-  outline-offset: 3px;
+   it lands on, coral included. Pointer focus is untouched.
+
+   outline-offset puts the ring on whatever is *behind* the element, so the
+   ground is almost always the page — hence --color-focus follows the theme.
+   The exception is a control inside a coral or clay panel, which is that
+   colour in both themes; those panels pin --color-focus to the fixed value.
+
+   In @layer base, not unlayered, so it is a *default* a component can decline
+   rather than a rule that outranks every one of them. .input already asks for
+   outline-none and paints its own clay border on focus; unlayered, this beat
+   that opt-out and stacked a second ring around the first. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 3px;
+  }
 }
 
 @layer components {
+  /* The one warm radial gradient every page sits on. .shell-wash is the
+     slightly deeper variant the signed-in shell and the auth pages use. */
+  .page-wash {
+    background-image: var(--page-wash);
+  }
+  .shell-wash {
+    background-image: var(--shell-wash);
+  }
+  .invite-wash {
+    background-image: var(--invite-wash);
+  }
+
   /* Surfaces */
   .card {
-    @apply rounded-[22px] border border-line bg-surface shadow-[0_10px_28px_-22px_rgba(60,40,20,0.5)];
+    @apply rounded-[22px] border border-line bg-surface shadow-surface;
   }
   .panel {
     @apply rounded-2xl border border-line bg-surface;
@@ -147,7 +474,7 @@ body {
     @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-[transform,background-color] duration-100 active:scale-[0.98] disabled:cursor-default disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-primary {
-    @apply bg-clay text-white shadow-[0_10px_22px_-12px_var(--color-clay)] hover:bg-clay-deep;
+    @apply bg-clay text-on-action shadow-[0_10px_22px_-12px_var(--color-clay)] hover:bg-clay-deep;
   }
   .btn-ghost {
     @apply border border-line bg-transparent text-ink hover:bg-amenity;
@@ -163,7 +490,7 @@ body {
     text-decoration-line: underline;
   }
   .btn-danger {
-    @apply bg-transparent text-[oklch(0.55_0.13_25)] hover:bg-[oklch(0.95_0.03_25)];
+    @apply bg-transparent text-danger hover:bg-danger-tint;
   }
 
   /* Forms */
@@ -181,7 +508,6 @@ body {
     border-radius: 0.75rem;
     background-color: var(--color-paper);
     color: var(--color-ink);
-    color-scheme: light;
     font-family: var(--font-body), system-ui, sans-serif;
     font-size: 0.875rem;
     line-height: 1.25rem;
@@ -206,7 +532,7 @@ body {
     border-radius: 0.75rem;
     background-color: var(--color-surface);
     color: var(--color-ink);
-    box-shadow: 0 18px 38px -28px rgba(60, 40, 20, 0.6);
+    box-shadow: var(--shadow-card);
   }
   .maps-address-shell gmp-place-autocomplete::part(prediction-item) {
     color: var(--color-faded);
@@ -231,7 +557,7 @@ body {
     @apply rounded-full bg-amenity px-2.5 py-1 font-mono text-[11px] font-medium text-amenity-ink;
   }
   .day-pill {
-    @apply cursor-pointer rounded-full border border-line px-3 py-1.5 text-sm font-semibold text-faded transition-colors peer-checked:border-clay peer-checked:bg-clay peer-checked:text-white;
+    @apply cursor-pointer rounded-full border border-line px-3 py-1.5 text-sm font-semibold text-faded transition-colors peer-checked:border-clay peer-checked:bg-clay peer-checked:text-on-action;
   }
   .page-title {
     @apply font-display text-3xl font-bold tracking-tight text-ink sm:text-[34px];

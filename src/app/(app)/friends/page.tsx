@@ -55,20 +55,17 @@ export default async function FriendsPage() {
       </p>
 
       <div className="space-y-9">
-        <section
-          className="rounded-[18px] p-5 text-white"
-          style={{
-            backgroundImage:
-              "linear-gradient(135deg, var(--color-grape), var(--color-grape-deep))",
-          }}
-        >
+        <section className="invite-wash rounded-[18px] border border-line p-5 text-invite-ink">
           <div className="font-display text-base font-semibold">Tu link para sumar gente</div>
           <p className="mt-0.5 text-[13px] opacity-85">El que lo acepta queda como amigo tuyo.</p>
           <div className="mt-3.5 flex max-w-md gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-xl bg-white/15 px-3 py-2.5 font-mono text-[13px]">
+            <code className="min-w-0 flex-1 truncate rounded-xl bg-invite-chip px-3 py-2.5 font-mono text-[13px] text-invite-chip-ink">
               {inviteUrl}
             </code>
-            <CopyButton text={inviteUrl} />
+            <CopyButton
+              text={inviteUrl}
+              className="bg-invite-action text-invite-action-ink"
+            />
           </div>
         </section>
 
@@ -108,7 +105,7 @@ export default async function FriendsPage() {
                   <div className="flex shrink-0 items-center gap-1.5">
                     <form action={acceptFriendRequest}>
                       <input type="hidden" name="requestId" value={request.id} />
-                      <button className="rounded-full bg-olive px-3 py-1.5 text-sm font-semibold text-white">
+                      <button className="rounded-full bg-olive px-3 py-1.5 text-sm font-semibold text-on-action">
                         Aceptar
                       </button>
                     </form>
@@ -196,7 +193,7 @@ export default async function FriendsPage() {
                             <button
                               className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
                                 inCircle
-                                  ? "border-olive bg-olive text-white"
+                                  ? "border-olive bg-olive text-on-action"
                                   : "border-line text-faded hover:border-olive/60"
                               }`}
                             >

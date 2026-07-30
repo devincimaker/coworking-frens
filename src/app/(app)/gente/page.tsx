@@ -31,7 +31,7 @@ function GenteRequestControls({
         <form action={acceptFriendRequest}>
           <input type="hidden" name="requestId" value={state.requestId} />
           <input type="hidden" name="profileUserId" value={personId} />
-          <button className="rounded-full bg-olive px-3 py-1.5 text-sm font-semibold text-white">
+          <button className="rounded-full bg-olive px-3 py-1.5 text-sm font-semibold text-on-action">
             Aceptar
           </button>
         </form>

@@ -235,7 +235,7 @@ export function ImageUploadField({
           handleFile(event.dataTransfer.files[0]);
         }}
         className={`rounded-2xl border p-3 transition-colors ${
-          dragging ? "border-clay bg-[oklch(0.96_0.03_45)]" : "border-line bg-paper"
+          dragging ? "border-clay bg-clay-tint" : "border-line bg-paper"
         }`}
       >
         <div className="flex items-center gap-3">

@@ -79,11 +79,11 @@ export function RuleCard({ rule }: { rule: HostRuleData }) {
           aria-pressed={rule.active}
           title={rule.active ? "Pausar" : "Reanudar"}
           className={`relative h-[27px] w-[46px] shrink-0 cursor-pointer rounded-full transition-colors ${
-            rule.active ? "bg-clay" : "bg-[oklch(0.85_0.01_70)]"
+            rule.active ? "bg-clay" : "bg-track"
           }`}
         >
           <span
-            className={`absolute top-[3px] h-[21px] w-[21px] rounded-full bg-white shadow-[0_1px_2px_rgba(60,40,20,0.2)] transition-[left] ${
+            className={`absolute top-[3px] h-[21px] w-[21px] rounded-full bg-knob shadow-nub transition-[left] ${
               rule.active ? "left-[22px]" : "left-[3px]"
             }`}
           />

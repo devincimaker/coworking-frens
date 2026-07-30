@@ -36,8 +36,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <>
-      <div className="flex min-h-dvh justify-center bg-[radial-gradient(120%_90%_at_50%_-10%,#f1e9dc_0%,#e7dcca_60%,#ddd0bb_100%)]">
-        <div className="flex w-full max-w-[1280px] bg-paper shadow-[0_0_90px_rgba(60,40,20,0.14)]">
+      <div className="shell-wash flex min-h-dvh justify-center">
+        <div className="flex w-full max-w-[1280px] bg-paper shadow-shell">
           <Sidebar
             user={user}
             signOutAction={signOutToHome}
