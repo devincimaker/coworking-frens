@@ -19,6 +19,12 @@
   /* The wash behind a chosen chip — warmer than clay at low opacity, which goes grey. */
   --color-clay-tint: oklch(0.96 0.03 45);
   --color-olive: oklch(0.58 0.1 145);
+  /* A *tint* pair, not a fill: the circle-member chip says "in" by going quietly
+     green rather than by inverting its text, so unlike --color-olive it never
+     needs --color-on-action. Both halves are redefined at night, so the pairing
+     — and its 7:1 — survives the flip. */
+  --color-olive-tint: oklch(0.93 0.05 150);
+  --color-olive-ink: oklch(0.43 0.1 150);
   --color-grape: oklch(0.64 0.13 295);
   --color-grape-deep: oklch(0.55 0.14 315);
   --color-amenity: oklch(0.95 0.012 75);
@@ -75,6 +81,12 @@
   --color-invite-chip-ink: var(--color-invite-ink);
   --color-invite-action: var(--color-action-surface);
   --color-invite-action-ink: var(--color-action-surface-ink-grape);
+
+  /* A circle is a lighter thing than a friend: its row is a wash over the page
+     rather than its own card, so it reads as a grouping of the list below it and
+     not as another item in that list. Translucent on purpose — it picks up the
+     page wash it sits on. */
+  --color-circle-row: rgba(255, 255, 255, 0.6);
 
   /* States that are neither a surface nor an action. "Full" is not disabled:
      it is a flat block with faded text reading Completo. */
@@ -283,6 +295,11 @@
   --color-clay-deep: oklch(0.755 0.145 46);
   --color-clay-tint: oklch(0.315 0.048 42);
   --color-olive: oklch(0.685 0.115 148);
+  /* The tint darkens and its ink brightens — they trade places rather than one
+     of them holding still, which is what keeps the chip legible without ever
+     borrowing the flipping --color-on-action. */
+  --color-olive-tint: oklch(0.3 0.05 150);
+  --color-olive-ink: oklch(0.775 0.1 150);
   --color-grape: oklch(0.725 0.13 295);
   --color-grape-deep: oklch(0.8 0.12 300);
   --color-danger: oklch(0.72 0.14 25);
@@ -323,6 +340,9 @@
   --color-rule: rgba(255, 240, 220, 0.13);
   --color-rule-strong: rgba(255, 240, 220, 0.26);
   --color-rule-hover: rgba(255, 240, 220, 0.45);
+
+  /* Warm white at 0.6 would be a glare at night; the same idea, inverted. */
+  --color-circle-row: rgba(255, 246, 232, 0.07);
 
   --color-disabled: oklch(0.255 0.008 60);
   --color-track: oklch(0.34 0.01 60);
@@ -466,6 +486,16 @@ body {
   .panel {
     @apply rounded-2xl border border-line bg-surface;
   }
+  /* An incoming friend request is the one thing on /friends that is *waiting on
+     you*, so it is the only surface tinted with clay rather than left neutral. */
+  .request-card {
+    @apply rounded-2xl border border-coral-200;
+    background-color: color-mix(in oklab, var(--color-clay) 8%, var(--color-sheet));
+  }
+  .circle-row {
+    @apply rounded-2xl border border-line;
+    background-color: var(--color-circle-row);
+  }
 
   /* Buttons */
   .btn-primary,
@@ -556,6 +586,33 @@ body {
   .amenity {
     @apply rounded-full bg-amenity px-2.5 py-1 font-mono text-[11px] font-medium text-amenity-ink;
   }
+  /* One friend, one toggle. "In" is a tint rather than a fill so a circle of
+     twelve does not turn into twelve solid green blocks; the tick carries the
+     state as much as the colour does, which is also what colour-blind users
+     read it by. */
+  .member-chip {
+    @apply inline-flex cursor-pointer items-center gap-[7px] rounded-full py-2 pr-3.5 pl-2.5 text-[13.5px] font-semibold transition-colors disabled:cursor-default disabled:opacity-60;
+  }
+  .member-chip-off {
+    @apply border border-line text-ink-700 hover:border-rule-strong;
+  }
+  .member-chip-on {
+    @apply bg-olive-tint text-olive-ink hover:brightness-[1.06];
+  }
+
+  /* Who hosts, twice over: an olive ring on the avatar for scanning a list, and
+     the .host-tag beside the name for the actual number. The ring's inner band
+     is the card behind it, so the olive reads as a detached halo rather than as
+     a thick border. */
+  .host-ring {
+    box-shadow:
+      0 0 0 2px var(--color-surface),
+      0 0 0 4px var(--color-olive);
+  }
+  .host-tag {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full border border-olive/25 bg-olive-tint px-2.5 py-1 font-mono text-[11px] font-medium text-olive-ink;
+  }
+
   .day-pill {
     @apply cursor-pointer rounded-full border border-line px-3 py-1.5 text-sm font-semibold text-faded transition-colors peer-checked:border-clay peer-checked:bg-clay peer-checked:text-on-action;
   }

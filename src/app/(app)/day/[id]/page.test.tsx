@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const authMock = vi.hoisted(() => vi.fn());
 const dayForUserMock = vi.hoisted(() => vi.fn());
+const hostedJuntadasForMock = vi.hoisted(() => vi.fn(async () => new Map<string, number>()));
 const friendConnectionStatesMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/link", () => ({
@@ -36,6 +37,7 @@ vi.mock("@/auth", () => ({
 
 vi.mock("@/lib/queries", () => ({
   dayForUser: dayForUserMock,
+  hostedJuntadasFor: hostedJuntadasForMock,
 }));
 
 vi.mock("@/lib/friends", () => ({
@@ -112,7 +114,7 @@ describe("DayPage friend request controls", () => {
         attendee("friend", "Fran"),
         attendee("outgoing", "Olga"),
         attendee("incoming", "Ivo"),
-        attendee("declined", "Dina"),
+        attendee("they_said_no", "Dina"),
       ])
     );
     friendConnectionStatesMock.mockResolvedValue(
@@ -122,7 +124,9 @@ describe("DayPage friend request controls", () => {
         ["friend", { kind: "friends" }],
         ["outgoing", { kind: "outgoing_pending", requestId: "request_out" }],
         ["incoming", { kind: "incoming_pending", requestId: "request_in" }],
-        ["declined", { kind: "outgoing_declined", requestId: "request_declined" }],
+        // Dina turned Ana down; Ana is shown the plain "sumar amigo" she would
+        // see for a stranger.
+        ["they_said_no", { kind: "none" }],
       ])
     );
 
@@ -134,14 +138,14 @@ describe("DayPage friend request controls", () => {
       "friend",
       "outgoing",
       "incoming",
-      "declined",
+      "they_said_no",
     ]);
-    expect(screen.getByText("sumar amigo")).toBeInTheDocument();
+    expect(screen.getAllByText("sumar amigo")).toHaveLength(2);
     expect(screen.getByText("amigo")).toBeInTheDocument();
     expect(screen.getByText("pedido enviado")).toBeInTheDocument();
     expect(screen.getByText("aceptar")).toBeInTheDocument();
     expect(screen.getByText("rechazar")).toBeInTheDocument();
-    expect(screen.getByText("pedir otra vez")).toBeInTheDocument();
+    expect(screen.queryByText("pedir otra vez")).not.toBeInTheDocument();
   });
 
   it("does not render request controls before the current user joins the day", async () => {

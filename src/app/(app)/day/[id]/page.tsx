@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { dayForUser } from "@/lib/queries";
+import { dayForUser, hostedJuntadasFor } from "@/lib/queries";
 import { formatDay, todayBA } from "@/lib/tz";
 import { accentFor, stripes } from "@/lib/accent";
 import { friendConnectionStates, type FriendConnectionState } from "@/lib/friends";
@@ -78,18 +78,6 @@ function AttendeeFriendControl({
     );
   }
 
-  if (state.kind === "outgoing_declined") {
-    return (
-      <form action={sendFriendRequestFromDay}>
-        <input type="hidden" name="dayId" value={dayId} />
-        <input type="hidden" name="recipientId" value={attendeeId} />
-        <button className="rounded-full border border-line px-2.5 py-1 font-mono text-[11px] font-medium text-faded hover:border-clay/50 hover:text-clay">
-          pedir otra vez
-        </button>
-      </form>
-    );
-  }
-
   if (state.kind === "incoming_declined") {
     return <span className="amenity">rechazado</span>;
   }
@@ -134,12 +122,16 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
   const isAttending = day.attendances.some((att) => att.user.id === userId);
   const canRequestAttendees = !isHost && isAttending;
   const selectedCircle = day.circle ?? day.rule?.circle ?? null;
-  const attendeeFriendStates = canRequestAttendees
-    ? await friendConnectionStates(
-        userId,
-        day.attendances.map((att) => att.user.id)
-      )
-    : new Map<string, FriendConnectionState>();
+  const attendeeIds = day.attendances.map((att) => att.user.id);
+  // Ring only in this list — the rows are 32px tall and already carry a name, a
+  // request control and a remove button. The number lives on the profile the
+  // name links to.
+  const [attendeeFriendStates, attendeesHosted] = await Promise.all([
+    canRequestAttendees
+      ? friendConnectionStates(userId, attendeeIds)
+      : Promise.resolve(new Map<string, FriendConnectionState>()),
+    hostedJuntadasFor(attendeeIds),
+  ]);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -274,7 +266,12 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
                   href={profileHref(att.user.id, userId)}
                   className="profile-link flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
                 >
-                  <Avatar name={att.user.name} image={att.user.image} size={32} />
+                  <Avatar
+                    name={att.user.name}
+                    image={att.user.image}
+                    size={32}
+                    hosts={(attendeesHosted.get(att.user.id) ?? 0) > 0}
+                  />
                   <div className="min-w-0 text-sm font-medium text-ink">
                     <span data-profile-label className="block truncate">{att.user.name}</span>
                     {att.user.id === userId && (

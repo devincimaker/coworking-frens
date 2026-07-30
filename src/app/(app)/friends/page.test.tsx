@@ -9,12 +9,12 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 const friendsMock = vi.hoisted(() => ({
-  FRIEND_REQUEST_DECLINED: "declined",
   friendRequestsForUser: vi.fn(),
   friendsOf: vi.fn(),
   mutualFriends: vi.fn(),
 }));
 const circlesOfMock = vi.hoisted(() => vi.fn());
+const hostedJuntadasForMock = vi.hoisted(() => vi.fn());
 const actionsMock = vi.hoisted(() => ({
   acceptFriendRequest: vi.fn(),
   createCircle: vi.fn(),
@@ -42,6 +42,7 @@ vi.mock("@/lib/friends", () => friendsMock);
 
 vi.mock("@/lib/queries", () => ({
   circlesOf: circlesOfMock,
+  hostedJuntadasFor: hostedJuntadasForMock,
 }));
 
 vi.mock("@/lib/url", () => ({
@@ -99,10 +100,11 @@ describe("FriendsPage friend request lifecycle", () => {
       },
     ]);
     circlesOfMock.mockResolvedValue([]);
+    hostedJuntadasForMock.mockResolvedValue(new Map());
     friendsMock.mutualFriends.mockResolvedValue(new Map());
   });
 
-  it("renders incoming actions and outgoing pending/declined states", async () => {
+  it("cards the requests waiting on you and folds away the ones you sent", async () => {
     friendsMock.friendRequestsForUser.mockResolvedValue({
       incoming: [
         {
@@ -146,36 +148,21 @@ describe("FriendsPage friend request lifecycle", () => {
           coworkDay,
           status: "pending",
         },
-        {
-          id: "outgoing_2",
-          requester: {
-            id: "me",
-            name: "Ana",
-            username: "ana",
-            email: "ana@example.com",
-            image: null,
-          },
-          recipient: {
-            id: "declined",
-            name: "Declined",
-            username: "declined",
-            email: "declined@example.com",
-            image: null,
-          },
-          coworkDay,
-          status: "declined",
-        },
       ],
     });
 
     render(await FriendsPage());
 
-    expect(screen.getByText("Pedidos (3)")).toBeInTheDocument();
+    expect(screen.getByText("Te quieren sumar · 1")).toBeInTheDocument();
     expect(screen.getByText("Aceptar")).toBeInTheDocument();
     expect(screen.getByText("Rechazar")).toBeInTheDocument();
+    // Sent requests stay folded behind one line rather than sitting beside the
+    // ones waiting on the viewer.
+    expect(screen.getByText(/1 pedido que mandaste vos/)).toBeInTheDocument();
     expect(screen.getByText("pendiente")).toBeInTheDocument();
-    expect(screen.getByText("rechazado")).toBeInTheDocument();
-    expect(screen.getByText("Todos (1)")).toBeInTheDocument();
+    // Being turned down is never named: those requests simply stop existing.
+    expect(screen.queryByText("rechazado")).not.toBeInTheDocument();
+    expect(screen.getByText("Todos · 1")).toBeInTheDocument();
     await waitFor(() =>
       expect(actionsMock.markFriendRequestBadgeSeen).toHaveBeenCalledWith(["incoming_1"])
     );

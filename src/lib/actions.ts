@@ -10,6 +10,7 @@ import {
   acceptFriendRequestForUser,
   areFriends,
   declineFriendRequestForUser,
+  friendIdsOf,
   friendsOf,
   markFriendRequestsShownInFriends,
   markFriendRequestsShownInJuntadas,
@@ -33,6 +34,7 @@ import {
   TERMS_REQUIRED_MESSAGE,
   TERMS_VERSION,
 } from "@/lib/terms";
+import { CIRCLE_NAME_MAX, type CreateCircleState } from "@/lib/circles";
 import { MAX_DAY_CAPACITY } from "@/lib/place";
 import { formatDay, todayBA, weekdayOf, WEEKDAY_PLURAL } from "@/lib/tz";
 import { appUrl } from "@/lib/url";
@@ -821,16 +823,54 @@ export async function deleteRule(formData: FormData) {
 
 // --- Circles ---
 
-export async function createCircle(formData: FormData) {
+
+/**
+ * A name *and* its people, in one transaction. An empty circle is not a circle
+ * half-made: it is an audience of nobody that then clutters the host picker and
+ * silently opens a day to no one, so the emptiness is rejected here rather than
+ * merely discouraged in the form. Returns its error instead of throwing —
+ * "you already have one called that" is the user's to fix, not a crash.
+ */
+export async function createCircle(
+  _prev: CreateCircleState,
+  formData: FormData
+): Promise<CreateCircleState> {
   const user = await requireOnboardedUser();
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) throw new Error("Name required");
-  await prisma.circle.upsert({
-    where: { ownerId_name: { ownerId: user.id, name } },
-    update: {},
-    create: { ownerId: user.id, name },
-  });
-  revalidatePath("/friends");
+  if (!name) return { error: "Poné un nombre.", created: false };
+  if (name.length > CIRCLE_NAME_MAX) {
+    return { error: `El nombre no puede pasar de ${CIRCLE_NAME_MAX} caracteres.`, created: false };
+  }
+
+  const memberIds = Array.from(
+    new Set(formData.getAll("memberIds").map((id) => String(id)).filter(Boolean))
+  );
+  if (memberIds.length === 0) return { error: "Elegí al menos a una persona.", created: false };
+
+  const friendIds = new Set(await friendIdsOf(user.id));
+  if (memberIds.some((id) => !friendIds.has(id))) {
+    return { error: "Alguno de los elegidos ya no es amigo tuyo.", created: false };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const circle = await tx.circle.create({ data: { ownerId: user.id, name } });
+      await tx.circleMember.createMany({
+        data: memberIds.map((userId) => ({ circleId: circle.id, userId })),
+      });
+    });
+  } catch (error) {
+    // The ownerId+name unique index, which the pre-check above can still lose a
+    // race to. Same message either way.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { error: `Ya tenés un círculo que se llama “${name}”.`, created: false };
+    }
+    throw error;
+  }
+
+  // Not just /friends: a new circle is a new audience to pick from on /host.
+  revalidateAll();
+  return { error: null, created: true };
 }
 
 export async function deleteCircle(formData: FormData) {
@@ -861,6 +901,11 @@ export async function toggleCircleMember(formData: FormData) {
     where: { circleId_userId: { circleId, userId: friendId } },
   });
   if (existing) {
+    // The other end of the rule createCircle enforces. Taking out the last
+    // member is a request to delete the circle, and the form asks that question
+    // outright rather than leaving an audience of nobody behind.
+    const members = await prisma.circleMember.count({ where: { circleId } });
+    if (members <= 1) throw new Error("A circle cannot be emptied");
     await prisma.circleMember.delete({ where: { id: existing.id } });
   } else {
     await prisma.circleMember.create({ data: { circleId, userId: friendId } });

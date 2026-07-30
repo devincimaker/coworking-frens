@@ -10,7 +10,8 @@ import {
   friendConnectionStates,
   mutualFriends,
 } from "@/lib/friends";
-import { dayInclude } from "@/lib/queries";
+import { HostTag } from "@/components/host-tag";
+import { dayInclude, hostedJuntadasFor } from "@/lib/queries";
 import { prisma } from "@/lib/prisma";
 import { formatDay, todayBA } from "@/lib/tz";
 import {
@@ -95,9 +96,7 @@ function ProfileRelationshipActions({
       <form action={sendFriendRequestFromGente}>
         <input type="hidden" name="recipientId" value={profileId} />
         <input type="hidden" name="profileUserId" value={profileId} />
-        <button className="btn-primary">
-          {state.kind === "outgoing_declined" ? "Pedir otra vez" : "Sumar amigo"}
-        </button>
+        <button className="btn-primary">Sumar amigo</button>
       </form>
     );
   }
@@ -107,9 +106,7 @@ function ProfileRelationshipActions({
       <input type="hidden" name="dayId" value={sharedDay.id} />
       <input type="hidden" name="recipientId" value={profileId} />
       <input type="hidden" name="profileUserId" value={profileId} />
-      <button className="btn-primary">
-        {state.kind === "outgoing_declined" ? "Pedir otra vez" : "Sumar amigo"}
-      </button>
+      <button className="btn-primary">Sumar amigo</button>
     </form>
   );
 }
@@ -134,7 +131,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
   if (!profile) notFound();
 
   const isSelf = profile.id === viewerId;
-  const [stateMap, mutualMap, sharedDay, visibleHostedDays] = await Promise.all([
+  const [stateMap, mutualMap, sharedDay, visibleHostedDays, hosted] = await Promise.all([
     isSelf
       ? Promise.resolve(new Map([[profile.id, { kind: "self" } satisfies FriendConnectionState]]))
       : friendConnectionStates(viewerId, [profile.id]),
@@ -168,7 +165,9 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
       take: 3,
       include: dayInclude,
     }),
+    hostedJuntadasFor([profile.id]),
   ]);
+  const hostedCount = hosted.get(profile.id) ?? 0;
   const title = profile.name ?? profile.username ?? "Perfil";
   const accent = accentFor(profile.id);
   const connectionState = stateMap.get(profile.id) ?? { kind: "none" };
@@ -188,14 +187,17 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
         <div className="h-16" style={{ background: stripes(accent, 18) }} />
         <div className="px-5 pb-5">
           <div className="-mt-9 flex flex-wrap items-end gap-4">
-            <Avatar name={title} image={profile.image} size={78} ring />
+            <Avatar name={title} image={profile.image} size={78} ring hosts={hostedCount > 0} />
             <div className="min-w-0 flex-1 pb-1">
               <h1 className="truncate font-display text-3xl font-bold tracking-tight text-ink">
                 {title}
               </h1>
-              <p className="truncate font-mono text-xs text-faded">
-                @{profile.username ?? profile.id.slice(0, 8)}
-              </p>
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                <p className="truncate font-mono text-xs text-faded">
+                  @{profile.username ?? profile.id.slice(0, 8)}
+                </p>
+                <HostTag count={hostedCount} />
+              </div>
             </div>
             <span className="amenity bg-olive/10 text-olive">
               {relationshipLabel({ isSelf, state: connectionState, sharedDay })}

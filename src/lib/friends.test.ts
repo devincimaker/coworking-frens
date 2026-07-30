@@ -243,7 +243,8 @@ describe("friend request helpers", () => {
       { id: "accepted_1", requesterId: "accepted", recipientId: "me", status: FRIEND_REQUEST_ACCEPTED },
       { id: "incoming_1", requesterId: "incoming", recipientId: "me", status: FRIEND_REQUEST_PENDING },
       { id: "outgoing_1", requesterId: "me", recipientId: "outgoing", status: FRIEND_REQUEST_PENDING },
-      { id: "declined_1", requesterId: "me", recipientId: "declined", status: FRIEND_REQUEST_DECLINED },
+      { id: "declined_1", requesterId: "me", recipientId: "they_said_no", status: FRIEND_REQUEST_DECLINED },
+      { id: "declined_2", requesterId: "i_said_no", recipientId: "me", status: FRIEND_REQUEST_DECLINED },
     ]);
 
     const states = await friendConnectionStates("me", [
@@ -252,7 +253,8 @@ describe("friend request helpers", () => {
       "accepted",
       "incoming",
       "outgoing",
-      "declined",
+      "they_said_no",
+      "i_said_no",
       "none",
     ]);
 
@@ -261,7 +263,13 @@ describe("friend request helpers", () => {
     expect(states.get("accepted")).toEqual({ kind: "friends" });
     expect(states.get("incoming")).toEqual({ kind: "incoming_pending", requestId: "incoming_1" });
     expect(states.get("outgoing")).toEqual({ kind: "outgoing_pending", requestId: "outgoing_1" });
-    expect(states.get("declined")).toEqual({ kind: "outgoing_declined", requestId: "declined_1" });
+    // Only the side that did the declining hears about it: being turned down
+    // reads exactly like never having asked, so no screen can leak it.
+    expect(states.get("they_said_no")).toEqual({ kind: "none" });
+    expect(states.get("i_said_no")).toEqual({
+      kind: "incoming_declined",
+      requestId: "declined_2",
+    });
     expect(states.get("none")).toEqual({ kind: "none" });
   });
 

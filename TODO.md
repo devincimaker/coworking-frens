@@ -37,6 +37,25 @@
   - Add a clear action for canceling a pending friend request the current user sent.
   - Remove or mark the pending request so the recipient no longer sees it as actionable.
   - Update Friends, Gente, and profile surfaces to reflect the canceled state.
+- [ ] Decide whether declining someone is reversible from your own side
+  - Today it is not. Decline a request and `friendConnectionStates` puts that person at
+    `incoming_declined` forever; Gente and the profile render a `rechazado` chip and **no action at all**,
+    so there is no way back to them from your side. A misclick on `Rechazar` is permanent. The only escape
+    is the other person asking again, which they have no reason to do — and no way to know they should.
+  - Do not undo the asymmetry this sits next to, which is deliberate: being turned down is invisible
+    (`FriendConnectionState` has no `outgoing_declined`; a rejected request reads as `none`, exactly like
+    never having asked), while *your own* decline stays visible to you. Hiding the rejection is what
+    protects the person who asked. This task is the other half — the person who declined has no undo.
+  - Two shapes, and they answer different questions. Either the chip keeps its place and grows an action
+    beside it (`Sumar amigo` / `Cambié de idea`), which admits the decline was yours and lets you take it
+    back; or `incoming_declined` collapses into `none` the same way its twin does, and the chip disappears
+    entirely — decline once, and the person is simply someone you have not added.
+  - The second is less code and less clutter, but it forgets on your behalf: someone you turned down on
+    purpose comes back looking like a stranger, with a `Sumar amigo` button, every time you scroll Gente.
+    That is the case to think through first — it is the whole reason the chip exists.
+  - Whichever way it goes, `requestFriendGlobally` and `requestFriendFromSharedDay` already revive a
+    declined row rather than duplicating it, so the server side needs nothing new. This is a UI decision.
+  - Surfaces to keep in step: `gente/page.tsx`, `u/[id]/page.tsx`, `day/[id]/page.tsx`.
 - [ ] Add Terms of Service and Privacy Policy
   - Draft and publish ToS and privacy policy pages, then link them from the sign-in flow and app footer/navigation.
 - [ ] Improve the home profile created during host setup
@@ -45,6 +64,9 @@
 - [ ] Improve the landing page copy
   - Better sell the vision and the why behind Coworking Frens, so new visitors quickly understand the emotional and practical value.
   - Rework the headline, supporting copy, and key sections to make the product feel more compelling without becoming generic marketing.
+- [ ] Add motion and moments of delight to app interactions
+  - Introduce purposeful animations and subtle sparkle effects for key actions, transitions, successes, and empty states so the app feels more polished and magical.
+  - Keep motion quick and restrained, preserve clear interaction feedback, and respect `prefers-reduced-motion` so delight never gets in the way of usability.
 - [ ] Improve link sharing metadata and brand assets
   - Add proper Open Graph/Twitter metadata so shared links show a compelling title, description, and preview image.
   - Create and use an actual Frens logo/favicon instead of the default Next.js triangle-style asset.

@@ -9,6 +9,8 @@ const prismaMock = vi.hoisted(() => ({
   coworkDay: {
     findFirst: vi.fn(),
     findMany: vi.fn(),
+    // hostedJuntadasFor; no host among the fixtures unless a test says so.
+    groupBy: vi.fn(async () => []),
   },
   user: {
     findUnique: vi.fn(),

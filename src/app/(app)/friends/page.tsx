@@ -2,27 +2,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  FRIEND_REQUEST_DECLINED,
-  friendRequestsForUser,
-  friendsOf,
-  mutualFriends,
-} from "@/lib/friends";
+import { friendRequestsForUser, friendsOf, mutualFriends } from "@/lib/friends";
 import { userProfilePath } from "@/lib/profile";
-import { circlesOf } from "@/lib/queries";
+import { circlesOf, hostedJuntadasFor } from "@/lib/queries";
 import { formatDay } from "@/lib/tz";
 import { appUrl } from "@/lib/url";
 import { Avatar } from "@/components/avatar";
-import { CopyButton } from "@/components/copy-button";
 import { FriendRequestSeenMarker } from "@/components/friend-request-seen-marker";
+import { HostTag } from "@/components/host-tag";
 import { MutualFriendsCount } from "@/components/mutual-friends";
-import {
-  acceptFriendRequest,
-  createCircle,
-  declineFriendRequest,
-  deleteCircle,
-  toggleCircleMember,
-} from "@/lib/actions";
+import { Circles } from "@/components/friends/circles";
+import { FriendList } from "@/components/friends/friend-list";
+import { InviteHeader } from "@/components/friends/invite-header";
+import { acceptFriendRequest, declineFriendRequest } from "@/lib/actions";
 
 export default async function FriendsPage() {
   const session = await auth();
@@ -36,12 +28,19 @@ export default async function FriendsPage() {
   ]);
   // Deciding on an incoming request is exactly when a mutual friend is the answer
   // to "do I know this person?", so the count rides along with the request row.
-  const incomingMutuals = await mutualFriends(
-    user.id,
-    requests.incoming.map((request) => request.requester.id)
-  );
+  // Requesters get the host count too: "this person actually has people over"
+  // is most of the answer when you are deciding whether to let them in.
+  const [incomingMutuals, hosted] = await Promise.all([
+    mutualFriends(
+      user.id,
+      requests.incoming.map((request) => request.requester.id)
+    ),
+    hostedJuntadasFor([
+      ...friends.map((friend) => friend.id),
+      ...requests.incoming.map((request) => request.requester.id),
+    ]),
+  ]);
   const inviteUrl = `${appUrl()}/invite/${user.inviteToken}`;
-  const requestCount = requests.incoming.length + requests.outgoing.length;
   const unseenIncomingRequestIds = requests.incoming
     .filter((request) => request.friendsShownAt === null)
     .map((request) => request.id);
@@ -49,49 +48,41 @@ export default async function FriendsPage() {
   return (
     <div>
       <FriendRequestSeenMarker requestIds={unseenIncomingRequestIds} />
-      <h1 className="page-title">Amigos</h1>
-      <p className="mt-2 mb-7 text-[15px] text-faded">
-        Tu gente y tus círculos. La amistad siempre es mutua.
-      </p>
 
-      <div className="space-y-9">
-        <section className="invite-wash rounded-[18px] border border-line p-5 text-invite-ink">
-          <div className="font-display text-base font-semibold">Tu link para sumar gente</div>
-          <p className="mt-0.5 text-[13px] opacity-85">El que lo acepta queda como amigo tuyo.</p>
-          <div className="mt-3.5 flex max-w-md gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-xl bg-invite-chip px-3 py-2.5 font-mono text-[13px] text-invite-chip-ink">
-              {inviteUrl}
-            </code>
-            <CopyButton
-              text={inviteUrl}
-              className="bg-invite-action text-invite-action-ink"
-            />
-          </div>
-        </section>
+      <InviteHeader inviteUrl={inviteUrl} subtitle="Solo tus amigos ven los días que abrís." />
 
-        <section>
-          <p className="eyebrow mb-2.5">Pedidos ({requestCount})</p>
-          {requestCount === 0 ? (
-            <p className="text-sm text-faded">No tenés pedidos.</p>
-          ) : (
+      <div className="space-y-8">
+        {/* Only what is waiting on you gets a card. Requests you sent are yours
+            to remember, not yours to answer, so they fold into one line. */}
+        {requests.incoming.length > 0 && (
+          <section>
+            <p className="eyebrow mb-3">Te quieren sumar · {requests.incoming.length}</p>
             <div className="space-y-2.5">
               {requests.incoming.map((request) => (
                 <div
                   key={request.id}
-                  className="panel flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap"
+                  className="request-card flex flex-wrap items-center gap-3.5 p-3.5 sm:flex-nowrap"
                 >
                   <Link
                     href={userProfilePath(request.requester.id)}
-                    className="profile-link flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+                    className="profile-link flex min-w-0 flex-1 items-center gap-3.5 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
                   >
-                    <Avatar name={request.requester.name} image={request.requester.image} size={38} />
+                    <Avatar
+                      name={request.requester.name}
+                      image={request.requester.image}
+                      size={44}
+                      hosts={(hosted.get(request.requester.id) ?? 0) > 0}
+                    />
                     <div className="min-w-0">
-                      <p data-profile-label className="truncate text-[15px] font-medium text-ink">
-                        {request.requester.name}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                        <p data-profile-label className="truncate text-[15.5px] font-semibold text-ink">
+                          {request.requester.name}
+                        </p>
+                        <HostTag count={hosted.get(request.requester.id) ?? 0} />
+                      </div>
                       <p
                         data-profile-label={request.coworkDay ? undefined : ""}
-                        className="truncate font-mono text-[11px] text-faded"
+                        className="truncate font-mono text-[11.5px] text-faded"
                       >
                         {request.coworkDay
                           ? `${request.coworkDay.place.nickname} · ${formatDay(request.coworkDay.date)}`
@@ -102,153 +93,111 @@ export default async function FriendsPage() {
                       />
                     </div>
                   </Link>
-                  <div className="flex shrink-0 items-center gap-1.5">
+                  {/* Full width under the name on a phone, where a 44px row of
+                      two buttons beside an avatar leaves neither one tappable. */}
+                  <div className="grid w-full shrink-0 grid-cols-2 gap-2 sm:flex sm:w-auto">
                     <form action={acceptFriendRequest}>
                       <input type="hidden" name="requestId" value={request.id} />
-                      <button className="rounded-full bg-olive px-3 py-1.5 text-sm font-semibold text-on-action">
+                      <button className="w-full cursor-pointer rounded-full bg-olive px-4 py-2.5 text-sm font-semibold text-on-action sm:py-2">
                         Aceptar
                       </button>
                     </form>
                     <form action={declineFriendRequest}>
                       <input type="hidden" name="requestId" value={request.id} />
-                      <button className="rounded-full border border-line px-3 py-1.5 text-sm font-semibold text-faded hover:text-clay">
+                      <button className="w-full cursor-pointer rounded-full border border-line px-4 py-2.5 text-sm font-semibold text-faded hover:text-clay sm:py-2">
                         Rechazar
                       </button>
                     </form>
                   </div>
                 </div>
               ))}
-
-              {requests.outgoing.map((request) => (
-                <div
-                  key={request.id}
-                  className="panel flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap"
-                >
-                  <Link
-                    href={userProfilePath(request.recipient.id)}
-                    className="profile-link flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
-                  >
-                    <Avatar name={request.recipient.name} image={request.recipient.image} size={38} />
-                    <div className="min-w-0">
-                      <p data-profile-label className="truncate text-[15px] font-medium text-ink">
-                        {request.recipient.name}
-                      </p>
-                      <p
-                        data-profile-label={request.coworkDay ? undefined : ""}
-                        className="truncate font-mono text-[11px] text-faded"
-                      >
-                        {request.coworkDay
-                          ? `${request.coworkDay.place.nickname} · ${formatDay(request.coworkDay.date)}`
-                          : `@${request.recipient.username ?? request.recipient.email.split("@")[0]}`}
-                      </p>
-                    </div>
-                  </Link>
-                  <span
-                    className={
-                      request.status === FRIEND_REQUEST_DECLINED
-                        ? "amenity bg-clay/10 text-clay"
-                        : "amenity"
-                    }
-                  >
-                    {request.status === FRIEND_REQUEST_DECLINED ? "rechazado" : "pendiente"}
-                  </span>
-                </div>
-              ))}
             </div>
-          )}
-        </section>
 
-        <section>
-          <div className="mb-2.5 flex items-center justify-between">
-            <p className="eyebrow">Mis círculos</p>
-          </div>
-          <p className="mb-3 text-sm text-faded">
-            Grupos privados de tus amigos, para cuando un día no es para todos. Nadie ve tus
-            círculos.
-          </p>
-          <div className="space-y-2.5">
-            {circles.map((circle) => {
-              const memberIds = new Set(circle.members.map((m) => m.user.id));
-              return (
-                <div key={circle.id} className="panel p-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-display text-lg font-semibold text-ink">“{circle.name}”</h3>
-                    <form action={deleteCircle}>
-                      <input type="hidden" name="circleId" value={circle.id} />
-                      <button className="font-mono text-[11px] text-faded hover:text-clay">
-                        borrar
-                      </button>
-                    </form>
-                  </div>
-                  {friends.length === 0 ? (
-                    <p className="mt-2 text-sm text-faded">Primero sumá amigos.</p>
-                  ) : (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {friends.map((f) => {
-                        const inCircle = memberIds.has(f.id);
-                        return (
-                          <form key={f.id} action={toggleCircleMember}>
-                            <input type="hidden" name="circleId" value={circle.id} />
-                            <input type="hidden" name="friendId" value={f.id} />
-                            <button
-                              className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
-                                inCircle
-                                  ? "border-olive bg-olive text-on-action"
-                                  : "border-line text-faded hover:border-olive/60"
-                              }`}
-                            >
-                              {inCircle ? "✓ " : "+ "}
-                              {f.name?.split(" ")[0]}
-                            </button>
-                          </form>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {requests.outgoing.length > 0 && <OutgoingRequests requests={requests.outgoing} />}
+          </section>
+        )}
 
-            <form action={createCircle} className="panel flex items-center gap-2 p-3">
-              <input
-                name="name"
-                placeholder="Nuevo círculo, ej. “los del deep work”"
-                required
-                className="input flex-1"
-              />
-              <button className="btn-ghost shrink-0">Crear</button>
-            </form>
-          </div>
-        </section>
+        {requests.incoming.length === 0 && requests.outgoing.length > 0 && (
+          <section>
+            <OutgoingRequests requests={requests.outgoing} standalone />
+          </section>
+        )}
 
-        <section>
-          <p className="eyebrow mb-2.5">Todos ({friends.length})</p>
-          {friends.length === 0 ? (
-            <p className="text-sm text-faded">
-              Todavía no tenés amigos — mandá tu link de arriba.
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 gap-x-6 gap-y-0.5 sm:grid-cols-2">
-              {friends.map((f) => (
-                <Link
-                  key={f.id}
-                  href={userProfilePath(f.id)}
-                  className="profile-link flex items-center gap-3 rounded-xl py-2 outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
-                >
-                  <Avatar name={f.name} image={f.image} size={38} />
-                  <div className="min-w-0">
-                    <p data-profile-label className="truncate text-[15px] font-medium text-ink">{f.name}</p>
-                    <p data-profile-label className="truncate font-mono text-[11px] text-faded">
-                      @{f.username ?? f.email.split("@")[0]}
-                    </p>
-                    {f.bio && <p className="truncate text-xs text-faded">{f.bio}</p>}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+        <Circles
+          circles={circles.map((circle) => ({
+            id: circle.id,
+            name: circle.name,
+            members: circle.members.map((member) => member.user),
+          }))}
+          friends={friends.map((friend) => ({
+            id: friend.id,
+            name: friend.name,
+            image: friend.image,
+          }))}
+        />
+
+        <FriendList
+          friends={friends.map((friend) => ({
+            id: friend.id,
+            name: friend.name,
+            username: friend.username,
+            email: friend.email,
+            image: friend.image,
+            hosted: hosted.get(friend.id) ?? 0,
+          }))}
+        />
       </div>
     </div>
+  );
+}
+
+type OutgoingRequest = Awaited<ReturnType<typeof friendRequestsForUser>>["outgoing"][number];
+
+/**
+ * A <details>, not a client component: nothing here needs state the browser
+ * cannot hold itself, and this way the list opens with JavaScript still loading.
+ */
+function OutgoingRequests({
+  requests,
+  standalone = false,
+}: {
+  requests: OutgoingRequest[];
+  standalone?: boolean;
+}) {
+  return (
+    <details className={`group ${standalone ? "" : "mt-3.5"}`}>
+      <summary className="flex w-fit cursor-pointer list-none items-center gap-2 rounded-lg font-mono text-[12px] text-faded outline-none hover:text-ink focus-visible:ring-2 focus-visible:ring-clay/60 [&::-webkit-details-marker]:hidden">
+        {requests.length} {requests.length === 1 ? "pedido" : "pedidos"} que mandaste vos
+        <span aria-hidden="true" className="transition-transform group-open:rotate-90">
+          ›
+        </span>
+      </summary>
+      <div className="mt-2.5 space-y-2.5">
+        {requests.map((request) => (
+          <div key={request.id} className="panel flex flex-wrap items-center gap-3 p-3">
+            <Link
+              href={userProfilePath(request.recipient.id)}
+              className="profile-link flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
+            >
+              <Avatar name={request.recipient.name} image={request.recipient.image} size={38} />
+              <div className="min-w-0">
+                <p data-profile-label className="truncate text-[15px] font-medium text-ink">
+                  {request.recipient.name}
+                </p>
+                <p
+                  data-profile-label={request.coworkDay ? undefined : ""}
+                  className="truncate font-mono text-[11px] text-faded"
+                >
+                  {request.coworkDay
+                    ? `${request.coworkDay.place.nickname} · ${formatDay(request.coworkDay.date)}`
+                    : `@${request.recipient.username ?? request.recipient.email.split("@")[0]}`}
+                </p>
+              </div>
+            </Link>
+            <span className="amenity">pendiente</span>
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }

@@ -79,3 +79,40 @@ export async function circlesOf(userId: string) {
     orderBy: { createdAt: "asc" },
   });
 }
+
+/**
+ * How many juntadas each of these people has already held.
+ *
+ * A count and nothing else — no dates, no places, no who-was-there — which is
+ * why it is safe to show about somebody you are not friends with yet, and why
+ * it is the number on a request card: "this person actually hosts" is the whole
+ * question when you are deciding whether to let them in. Anything sharper than
+ * an aggregate (that they have a day open on Friday) would leak a juntada that
+ * may well have been opened to one private circle, so it is deliberately absent.
+ *
+ * A juntada counts as received only if it actually happened *and* somebody
+ * turned up for it: a day nobody claimed a spot on was an open door into an
+ * empty room, and counting it would let anyone inflate the number by opening
+ * days on a calendar. joinDay refuses the host their own day, so every row in
+ * `attendances` is a guest — `some: {}` is exactly "alguien dijo que iba".
+ *
+ * Past and not cancelled, for the same reason: neither a cancelled day nor one
+ * still to come has received anyone.
+ */
+export async function hostedJuntadasFor(personIds: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (personIds.length === 0) return counts;
+
+  const rows = await prisma.coworkDay.groupBy({
+    by: ["hostId"],
+    where: {
+      hostId: { in: personIds },
+      status: "open",
+      date: { lt: todayBA() },
+      attendances: { some: {} },
+    },
+    _count: { _all: true },
+  });
+  for (const row of rows) counts.set(row.hostId, row._count._all);
+  return counts;
+}

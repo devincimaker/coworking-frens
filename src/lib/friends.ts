@@ -12,13 +12,19 @@ export type MutualFriend = {
   image: string | null;
 };
 
+/**
+ * A request you sent and they turned down has no state of its own: it reads as
+ * "none", exactly like never having asked. Being told you were rejected is a
+ * small humiliation the product has no use for, and the row still exists in the
+ * database, so asking again quietly reopens it. Collapsed here rather than in
+ * each screen so no future screen can leak it back.
+ */
 export type FriendConnectionState =
   | { kind: "self" }
   | { kind: "friends" }
   | { kind: "incoming_pending"; requestId: string }
   | { kind: "outgoing_pending"; requestId: string }
   | { kind: "incoming_declined"; requestId: string }
-  | { kind: "outgoing_declined"; requestId: string }
   | { kind: "none" };
 
 type OpenAudienceStore = Pick<typeof prisma, "coworkDay" | "dayAudience">;
@@ -279,11 +285,14 @@ export async function friendConnectionStates(
       continue;
     }
 
-    if (request.status === FRIEND_REQUEST_DECLINED && states.get(otherId)?.kind === "none") {
-      states.set(otherId, {
-        kind: request.requesterId === userId ? "outgoing_declined" : "incoming_declined",
-        requestId: request.id,
-      });
+    // Only the side that did the declining hears about it. The one who asked is
+    // left at "none" — see FriendConnectionState.
+    if (
+      request.status === FRIEND_REQUEST_DECLINED &&
+      request.recipientId === userId &&
+      states.get(otherId)?.kind === "none"
+    ) {
+      states.set(otherId, { kind: "incoming_declined", requestId: request.id });
     }
   }
 
@@ -477,11 +486,10 @@ export async function friendRequestsForUser(userId: string) {
       include: friendRequestPeopleAndDay,
       orderBy: { createdAt: "desc" },
     }),
+    // Pending only: a request they turned down is not something you are still
+    // waiting on, and naming it would only tell you that you were rejected.
     prisma.friendRequest.findMany({
-      where: {
-        requesterId: userId,
-        status: { in: [FRIEND_REQUEST_PENDING, FRIEND_REQUEST_DECLINED] },
-      },
+      where: { requesterId: userId, status: FRIEND_REQUEST_PENDING },
       include: friendRequestPeopleAndDay,
       orderBy: { createdAt: "desc" },
     }),

@@ -8,6 +8,8 @@ import {
 } from "@/lib/friends";
 import { userProfilePath } from "@/lib/profile";
 import { prisma } from "@/lib/prisma";
+import { hostedJuntadasFor } from "@/lib/queries";
+import { HostTag } from "@/components/host-tag";
 import {
   acceptFriendRequest,
   declineFriendRequest,
@@ -60,9 +62,7 @@ function GenteRequestControls({
     <form action={sendFriendRequestFromGente}>
       <input type="hidden" name="recipientId" value={personId} />
       <input type="hidden" name="profileUserId" value={personId} />
-      <button className={state.kind === "outgoing_declined" ? "btn-ghost" : "btn-primary"}>
-        {state.kind === "outgoing_declined" ? "Pedir otra vez" : "Sumar amigo"}
-      </button>
+      <button className="btn-primary">Sumar amigo</button>
     </form>
   );
 }
@@ -90,10 +90,11 @@ export default async function GentePage() {
       bio: true,
     },
   });
-  const stateMap = await friendConnectionStates(
-    userId,
-    people.map((person) => person.id)
-  );
+  const personIds = people.map((person) => person.id);
+  const [stateMap, hosted] = await Promise.all([
+    friendConnectionStates(userId, personIds),
+    hostedJuntadasFor(personIds),
+  ]);
 
   return (
     <div>
@@ -121,6 +122,7 @@ export default async function GentePage() {
           {people.map((person) => {
             const title = person.name ?? person.username ?? "Fren";
             const state = stateMap.get(person.id) ?? { kind: "none" };
+            const hostedCount = hosted.get(person.id) ?? 0;
 
             return (
               <article key={person.id} className="panel p-4 transition-colors hover:border-clay/30">
@@ -130,11 +132,19 @@ export default async function GentePage() {
                     aria-label={title}
                     className="profile-link flex min-w-0 items-start gap-3 rounded-lg outline-none hover:text-clay focus-visible:ring-2 focus-visible:ring-clay/60"
                   >
-                    <Avatar name={title} image={person.image} size={54} />
+                    <Avatar
+                      name={title}
+                      image={person.image}
+                      size={54}
+                      hosts={hostedCount > 0}
+                    />
                     <div className="min-w-0">
-                      <h2 data-profile-label className="truncate font-display text-xl font-semibold tracking-tight text-ink">
-                        {title}
-                      </h2>
+                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                        <h2 data-profile-label className="truncate font-display text-xl font-semibold tracking-tight text-ink">
+                          {title}
+                        </h2>
+                        <HostTag count={hostedCount} />
+                      </div>
                       <p data-profile-label className="truncate font-mono text-[12px] text-faded">
                         @{person.username}
                       </p>

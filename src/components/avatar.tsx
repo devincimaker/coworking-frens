@@ -24,13 +24,16 @@ export function Avatar({
   image,
   size = 32,
   ring = false,
+  hosts = false,
 }: {
   name: string | null;
   image: string | null;
   size?: number;
   ring?: boolean;
+  /** An olive halo saying this person opens their place. See .host-ring. */
+  hosts?: boolean;
 }) {
-  const cls = `shrink-0 rounded-full ${ring ? "ring-2 ring-surface" : ""}`;
+  const cls = `shrink-0 rounded-full ${ring ? "ring-2 ring-surface" : ""} ${hosts ? "host-ring" : ""}`;
   if (image) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -57,15 +60,28 @@ export function Avatar({
 export function AvatarStack({
   users,
   size = 26,
+  max,
 }: {
   users: { id: string; name: string | null; image: string | null }[];
   size?: number;
+  /** Past this many faces the rest collapse into a +N bubble in the same row. */
+  max?: number;
 }) {
+  const shown = max === undefined ? users : users.slice(0, max);
+  const rest = users.length - shown.length;
   return (
     <div className="flex -space-x-2">
-      {users.map((u) => (
+      {shown.map((u) => (
         <Avatar key={u.id} name={u.name} image={u.image} size={size} ring />
       ))}
+      {rest > 0 && (
+        <span
+          className="flex shrink-0 items-center justify-center rounded-full bg-amenity font-mono text-amenity-ink ring-2 ring-surface"
+          style={{ width: size, height: size, fontSize: size * 0.4 }}
+        >
+          +{rest}
+        </span>
+      )}
     </div>
   );
 }

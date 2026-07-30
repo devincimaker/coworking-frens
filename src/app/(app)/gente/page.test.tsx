@@ -5,6 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const authMock = vi.hoisted(() => vi.fn());
 const friendConnectionStatesMock = vi.hoisted(() => vi.fn());
 const prismaMock = vi.hoisted(() => ({
+  coworkDay: {
+    // hostedJuntadasFor; no host among the fixtures unless a test says so.
+    groupBy: vi.fn(async () => []),
+  },
   user: {
     findMany: vi.fn(),
   },
