@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "./scripts/dev.sh",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "prisma generate && ./scripts/migrate-deploy.sh && next build",
     "start": "./scripts/start.sh",
     "lint": "eslint",
     "test": "vitest run",
