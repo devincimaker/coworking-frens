@@ -191,6 +191,27 @@ function CalendarRow({
   onPick: (which: "google" | "ics") => void;
   onDismiss: () => void;
 }) {
+  /**
+   * The row lands under the finger that just tapped "Sumarme", so for a moment
+   * it ignores that finger. Without this, a fast double tap — the thing people
+   * do when a button seems slow, and there is a round trip here — falls straight
+   * through onto whatever now occupies that spot. Landing on a calendar is
+   * harmless; landing on "Ahora no" silently dismisses an offer nobody saw.
+   */
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setArmed(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const guard = (run: () => void) => (event: React.MouseEvent) => {
+    if (!armed) {
+      event.preventDefault(); // a link would otherwise navigate anyway
+      return;
+    }
+    run();
+  };
+
   const eyebrow = (
     <div className="flex items-center gap-1.5 font-mono text-[11px] font-medium tracking-wide uppercase">
       <CalendarIcon />
@@ -209,7 +230,7 @@ function CalendarRow({
             href={joined.calendar.googleHref}
             target="_blank"
             rel="noreferrer"
-            onClick={() => onPick("google")}
+            onClick={guard(() => onPick("google"))}
             className="flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-[13px] bg-clay text-sm font-semibold text-on-action"
           >
             Google
@@ -217,7 +238,7 @@ function CalendarRow({
           <a
             href={joined.calendar.icsHref}
             download
-            onClick={() => onPick("ics")}
+            onClick={guard(() => onPick("ics"))}
             className="flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-[13px] border border-rule-strong bg-surface text-sm font-semibold text-ink"
           >
             Apple
@@ -225,7 +246,7 @@ function CalendarRow({
         </div>
         <button
           type="button"
-          onClick={onDismiss}
+          onClick={guard(onDismiss)}
           className="mt-1 min-h-9 w-full cursor-pointer font-mono text-[11px] text-faded transition-colors hover:text-clay"
         >
           Ahora no
@@ -248,7 +269,7 @@ function CalendarRow({
             href={joined.calendar.googleHref}
             target="_blank"
             rel="noreferrer"
-            onClick={() => onPick("google")}
+            onClick={guard(() => onPick("google"))}
             className="btn-primary min-h-11 rounded-[14px] px-4 text-sm"
           >
             Google Calendar
@@ -256,14 +277,14 @@ function CalendarRow({
           <a
             href={joined.calendar.icsHref}
             download
-            onClick={() => onPick("ics")}
+            onClick={guard(() => onPick("ics"))}
             className="btn-ghost min-h-11 rounded-[14px] border-rule-strong px-4 text-sm"
           >
             Apple Calendar
           </a>
           <button
             type="button"
-            onClick={onDismiss}
+            onClick={guard(onDismiss)}
             className="min-h-11 cursor-pointer rounded-[14px] px-3 text-sm font-semibold text-faded transition-colors hover:text-clay"
           >
             Ahora no

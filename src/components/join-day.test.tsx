@@ -36,6 +36,14 @@ async function join() {
 const google = () => screen.queryByRole("link", { name: /Google/ });
 const apple = () => screen.queryByRole("link", { name: /Apple/ });
 
+/**
+ * The row ignores the pointer for its first 300ms — see "the tap that opened it"
+ * below. Anything testing a deliberate choice has to wait that out first.
+ */
+async function afterGuard() {
+  await new Promise((resolve) => setTimeout(resolve, 350));
+}
+
 describe("JoinDayButton", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -92,6 +100,7 @@ describe("JoinDayButton", () => {
     await join();
     await waitFor(() => expect(google()).toBeInTheDocument());
 
+    await afterGuard();
     fireEvent.click(google()!);
 
     await waitFor(() => expect(screen.getByText(/✓ Vas/)).toBeInTheDocument());
@@ -104,6 +113,7 @@ describe("JoinDayButton", () => {
     await join();
     await waitFor(() => expect(apple()).toBeInTheDocument());
 
+    await afterGuard();
     fireEvent.click(apple()!);
 
     await waitFor(() => expect(screen.getByText("Descargamos el .ics")).toBeInTheDocument());
@@ -114,6 +124,7 @@ describe("JoinDayButton", () => {
     await join();
     await waitFor(() => expect(google()).toBeInTheDocument());
 
+    await afterGuard();
     fireEvent.click(screen.getByRole("button", { name: "Ahora no" }));
 
     await waitFor(() => expect(screen.getByText(/✓ Vas/)).toBeInTheDocument());
@@ -125,6 +136,7 @@ describe("JoinDayButton", () => {
     renderButton("detail");
     await join();
     await waitFor(() => expect(google()).toBeInTheDocument());
+    await afterGuard();
     fireEvent.click(screen.getByRole("button", { name: "Ahora no" }));
 
     await waitFor(() =>
@@ -171,6 +183,49 @@ describe("JoinDayButton", () => {
 
     expect(joinDayMock).toHaveBeenCalledTimes(1);
     release(RESULT);
+  });
+
+  /**
+   * The row lands under the finger that just tapped "Sumarme". A fast double tap
+   * — what people do when a button seems slow, and joining is a round trip —
+   * would otherwise fall straight through onto whatever now sits there. Onto a
+   * calendar it is harmless; onto "Ahora no" it silently dismisses an offer
+   * nobody ever saw.
+   */
+  describe("the tap that opened it", () => {
+    it("cannot dismiss the row it just opened", async () => {
+      renderButton();
+      await join();
+      await waitFor(() => expect(google()).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole("button", { name: "Ahora no" }));
+
+      expect(google()).toBeInTheDocument();
+      expect(screen.queryByText(/✓ Vas/)).not.toBeInTheDocument();
+    });
+
+    it("cannot pick a calendar by accident either", async () => {
+      renderButton();
+      await join();
+      await waitFor(() => expect(google()).toBeInTheDocument());
+
+      fireEvent.click(google()!);
+
+      expect(screen.queryByText("Agregada a Google Calendar")).not.toBeInTheDocument();
+    });
+
+    it("accepts a real tap once the moment has passed", async () => {
+      renderButton();
+      await join();
+      await waitFor(() => expect(google()).toBeInTheDocument());
+
+      await afterGuard();
+      fireEvent.click(google()!);
+
+      await waitFor(() =>
+        expect(screen.getByText("Agregada a Google Calendar")).toBeInTheDocument()
+      );
+    });
   });
 
   it("keeps a full day from being joined at all", () => {

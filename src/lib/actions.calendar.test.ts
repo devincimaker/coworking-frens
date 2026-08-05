@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import ical, { type VEvent } from "node-ical";
 
 const requireOnboardedUserMock = vi.hoisted(() => vi.fn());
 const sendEmailMock = vi.hoisted(() => vi.fn());
@@ -63,12 +62,7 @@ function joinableDay(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/** The arguments of the send addressed to the person who just joined. */
-function confirmationCall() {
-  return sendEmailMock.mock.calls.find((call) => call[0]?.[0] === JOINER.email);
-}
-
-describe("joinDay confirmation", () => {
+describe("joinDay", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("APP_URL", "https://frens.example");
@@ -79,44 +73,25 @@ describe("joinDay confirmation", () => {
     prismaMock.coworkDay.findFirst.mockResolvedValue(joinableDay());
   });
 
-  it("tells the host and confirms to the person who joined", async () => {
+  // Exactly one mail, to the host. The joiner just pressed the button and the
+  // row that replaces it hands them both calendars, so a confirmation would tell
+  // them something they watched happen — and make them wait a second round trip
+  // to Resend before the button could move.
+  it("tells the host and nobody else", async () => {
     await joinDay(formData({ dayId: "day_1" }));
 
-    expect(sendEmailMock).toHaveBeenCalledTimes(2);
+    expect(sendEmailMock).toHaveBeenCalledTimes(1);
     expect(sendEmailMock).toHaveBeenCalledWith(
       ["ana@example.com"],
       expect.stringContaining("Lea se suma"),
       expect.any(String)
     );
-    expect(confirmationCall()?.[1]).toContain("Ya estás anotado");
-  });
-
-  it("attaches an .ics naming the same juntada", async () => {
-    await joinDay(formData({ dayId: "day_1" }));
-
-    const attachments = confirmationCall()?.[3]?.attachments;
-    expect(attachments).toHaveLength(1);
-    expect(attachments[0].filename).toBe(`juntada-${todayBA()}.ics`);
-
-    const parsed = ical.sync.parseICS(attachments[0].content);
-    const events = Object.values(parsed).filter(
-      (entry): entry is VEvent => entry?.type === "VEVENT"
+    expect(sendEmailMock).not.toHaveBeenCalledWith(
+      [JOINER.email],
+      expect.anything(),
+      expect.anything(),
+      expect.anything()
     );
-    expect(events).toHaveLength(1);
-    expect(events[0]?.summary).toBe("Juntada en El Nido");
-    expect(events[0]?.location).toBe("Gorriti 4500, Palermo");
-    expect(events[0]?.url).toBe("https://frens.example/day/day_1");
-  });
-
-  it("offers Google Calendar and the day page in the body", async () => {
-    await joinDay(formData({ dayId: "day_1" }));
-
-    const body = confirmationCall()?.[2] as string;
-    expect(body).toContain("https://calendar.google.com/calendar/render");
-    expect(body).toContain("ctz=America%2FArgentina%2FBuenos_Aires");
-    expect(body).toContain("https://frens.example/day/day_1");
-    expect(body).toContain("Gorriti 4500, Palermo");
-    expect(body).toContain("Timbre 3B");
   });
 
   // A double tap on "Sumarme", or a replayed form, is not a second arrival.
@@ -129,28 +104,6 @@ describe("joinDay confirmation", () => {
 
     expect(prismaMock.attendance.create).not.toHaveBeenCalled();
     expect(sendEmailMock).not.toHaveBeenCalled();
-  });
-
-  // The seat is the thing that matters. sendEmail swallows its own failures, but
-  // assembling the event is new work that could throw on data we did not foresee,
-  // and nobody should lose their place over a calendar file. The host notice goes
-  // out first, so the failure is aimed at the second call — the confirmation.
-  it("keeps the seat when the confirmation cannot be built or sent", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    sendEmailMock
-      .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error("smtp down"));
-
-    const result = await joinDay(formData({ dayId: "day_1" }));
-
-    expect(prismaMock.attendance.create).toHaveBeenCalledWith({
-      data: { dayId: "day_1", userId: JOINER.id },
-    });
-    // And the confirmation still reaches the screen, which is now the only copy
-    // of the calendar links they are going to get.
-    expect(result?.calendar.icsHref).toBe("/api/day/day_1/ics");
-    expect(console.error).toHaveBeenCalledWith("join confirmation failed", "smtp down");
-    vi.mocked(console.error).mockRestore();
   });
 
   it("hands back the place, the time and both links to confirm on screen", async () => {

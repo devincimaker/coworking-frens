@@ -35,14 +35,7 @@ import {
   TERMS_REQUIRED_MESSAGE,
   TERMS_VERSION,
 } from "@/lib/terms";
-import {
-  buildIcs,
-  calendarEventFor,
-  calendarLinksFor,
-  googleCalendarUrl,
-  type CalendarDay,
-  type CalendarLinks,
-} from "@/lib/calendar";
+import { calendarLinksFor, type CalendarLinks } from "@/lib/calendar";
 import { CIRCLE_NAME_MAX, type CreateCircleState } from "@/lib/circles";
 import { MAX_DAY_CAPACITY } from "@/lib/place";
 import { formatDay, todayBA, weekdayOf, WEEKDAY_PLURAL } from "@/lib/tz";
@@ -574,30 +567,6 @@ export async function cancelDay(formData: FormData) {
   revalidateAll();
 }
 
-/** The joiner's own copy: what they signed up for, with the event attached. */
-function joinConfirmation(day: CalendarDay & { startTime: string; endTime: string }) {
-  const event = calendarEventFor(day);
-  const where = day.place.address.trim();
-  const notes = day.place.arrivalNotes.trim();
-
-  return {
-    subject: `Ya estás anotado: ${day.place.nickname}, ${formatDay(day.date)}`,
-    text: [
-      `Listo, tenés lugar en ${day.place.nickname} el ${formatDay(day.date)}, ${day.startTime}–${day.endTime}.`,
-      where ? `Dónde: ${where}` : "",
-      notes ? `Cómo llegar: ${notes}` : "",
-      `Agregala a tu calendario: el archivo .ics va adjunto, o abrila en Google Calendar:\n${googleCalendarUrl(event)}`,
-      `Quiénes van y el resto de los detalles: ${appUrl()}/day/${day.id}`,
-    ]
-      .filter(Boolean)
-      .join("\n\n"),
-    attachment: {
-      filename: `juntada-${day.date}.ics`,
-      content: buildIcs(event, new Date()),
-    },
-  };
-}
-
 /**
  * What the join hands back so the moment can be confirmed on screen. Null when
  * nothing happened — you were already going — so a replay stays silent.
@@ -642,18 +611,11 @@ export async function joinDay(formData: FormData): Promise<JoinResult> {
     `${user.name} agarró un lugar en ${day.place.nickname} el ${formatDay(day.date)}, ${day.startTime}–${day.endTime}.\n\n${appUrl()}/day/${day.id}`
   );
 
-  // The seat is already committed. sendEmail swallows its own failures, but
-  // building the event is new work that can throw on data we did not foresee —
-  // and nobody should lose their place because a calendar file would not
-  // assemble. Whatever happens here, they are going.
-  try {
-    const confirmation = joinConfirmation(day);
-    await sendEmail([user.email], confirmation.subject, confirmation.text, {
-      attachments: [confirmation.attachment],
-    });
-  } catch (err) {
-    console.error("join confirmation failed", err instanceof Error ? err.message : err);
-  }
+  // No confirmation to the joiner. They just pressed the button, the row that
+  // replaces it offers both calendars on the spot, and the day-before reminder
+  // in api/cron already carries the address when "don't forget" actually
+  // matters. A third telling would only cost them a mail and cost the join a
+  // second round trip to Resend before the button could move.
 
   // Deliberately no revalidateAll() here. Revalidating re-renders the join
   // button as "✓ Vas", which would tear down the calendar row this result is
