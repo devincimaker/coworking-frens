@@ -122,17 +122,17 @@ Worktrees are isolated on four axes — own directory and `node_modules`, own po
 3100-3199, own database in the shared container, own env values — so parallel `/start`
 agents are the intended shape, not an abuse of it.
 
-The one collision point: `worktree-setup.sh` takes a global `setup.lock` and holds it for
-the *whole* setup (Docker, `createdb`, `prisma generate`, `migrate deploy`, sometimes
-`npm ci`), but only waits **10 seconds** to acquire it. Start four at once and three will
-lose. That is the guard working — see the table below for the recovery, and never remove
-the lock directory to get around it.
+`worktree-setup.sh` serializes only the parts that touch shared state: choosing a port and
+database name, and bringing the Postgres container up. Installing dependencies and
+applying migrations run unlocked, because they touch nothing another worktree can see.
+Three concurrent setups is verified to work. If you do hit a lock timeout, the message
+names the lock and the process holding it.
 
 ## When something goes wrong
 
 | Symptom | What it means | Do this |
 | --- | --- | --- |
-| `Timed out waiting for another worktree setup to finish` | a parallel `/start` holds `setup.lock`; the 10s budget expired while its install ran | **expected under parallelism, not a failure.** The git worktree already exists — wait ~60s, then `scripts/worktree-setup.sh '<target>'`. Never `rmdir` the lock |
+| `Timed out after 120s waiting for the '<name>' lock` | genuinely stuck — the lock only covers allocation and the container start, both quick | the message names the holding PID and the lock path. If that process is gone the next run reclaims it automatically; otherwise wait for it, then re-run `scripts/worktree-setup.sh '<target>'` |
 | `Branch is already checked out: <branch>` | someone is already on it | `npm run wt:list`, enter that worktree instead of creating one |
 | `Target already exists: <path>` | a previous run got that far | enter it; re-run `scripts/worktree-setup.sh '<path>'` if it looks half-built |
 | "The Git worktree was created, but setup did not finish" | setup died mid-run | run the retry line it printed; the worktree is fine |

@@ -19,16 +19,14 @@ target_common=$(git -C "$target" rev-parse --path-format=absolute --git-common-d
 branch=$(git -C "$target" branch --show-current)
 [ -n "$branch" ] || worktree_die "Worktree must be on a branch, not detached HEAD"
 
-state_dir=$(worktree_state_dir)
-mkdir -p "$state_dir"
-lock_dir="$state_dir/setup.lock"
-attempt=0
-until mkdir "$lock_dir" 2>/dev/null; do
-  attempt=$((attempt + 1))
-  [ "$attempt" -lt 100 ] || worktree_die "Timed out waiting for another worktree setup to finish"
-  sleep 0.1
-done
-trap 'rmdir "$lock_dir" 2>/dev/null || true' EXIT
+trap 'worktree_unlock' EXIT
+
+# Picking a port and a database name is the one part two setups must not do at
+# once: scanning concurrently, both could land on 3100. It is also quick, and
+# everything after it touches only this worktree, so the lock is released as
+# soon as the choice is recorded in .env.worktree — where the next setup's scan
+# will see it — rather than being carried through the install below.
+worktree_lock alloc
 
 metadata="$target/.env.worktree"
 app_port=$(worktree_read_value "$metadata" "FRENS_APP_PORT" 2>/dev/null || true)
@@ -56,6 +54,8 @@ FRENS_APP_PORT=$app_port
 FRENS_DB_NAME=$db_name
 FRENS_POSTGRES_PORT=$postgres_port
 EOF
+
+worktree_unlock
 
 if [ ! -f "$target/.env" ]; then
   if [ -f "$primary/.env" ]; then
@@ -91,6 +91,10 @@ if [ ! -d "$target/node_modules" ]; then
   fi
 fi
 
+# The container and the database are shared, so this is serialized too — but
+# only this. Compose returns straight away once the service is already healthy,
+# which it is for every setup after the first.
+worktree_lock postgres
 echo "Starting the shared Postgres service..."
 worktree_compose up -d --wait postgres
 
@@ -98,6 +102,7 @@ if ! worktree_compose exec -T postgres psql -U frens -d postgres -tAc \
   "SELECT 1 FROM pg_database WHERE datname = '$db_name'" | grep -q 1; then
   worktree_compose exec -T postgres createdb -U frens "$db_name"
 fi
+worktree_unlock
 
 echo "Applying migrations to $db_name..."
 (cd "$target" && ./node_modules/.bin/prisma generate && ./node_modules/.bin/prisma migrate deploy)

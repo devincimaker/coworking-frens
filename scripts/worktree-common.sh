@@ -22,6 +22,50 @@ worktree_state_dir() {
   printf '%s/frens-worktrees\n' "$(worktree_git_common_dir)"
 }
 
+WORKTREE_LOCK_HELD=""
+
+# Serialize a critical section across the worktrees sharing this repo. mkdir is
+# atomic, so whichever process creates the directory owns the lock.
+#
+# Hold one only around genuinely shared state — choosing a port, creating a
+# database — and never around per-worktree work like installing dependencies or
+# applying migrations. That distinction is the whole point: a lock held for the
+# minutes an install takes turns parallel setups into a queue, while the section
+# that actually needs protecting finishes in milliseconds.
+worktree_lock() {
+  local name=$1
+  local timeout=${2:-120}
+  local state_dir lock_dir owner waited=0
+
+  state_dir=$(worktree_state_dir)
+  mkdir -p "$state_dir"
+  lock_dir="$state_dir/${name}.lock"
+
+  until mkdir "$lock_dir" 2>/dev/null; do
+    # Reclaim a lock whose owner is gone (kill -9, a closed terminal). Without
+    # this, one crashed setup would block every later one until it timed out.
+    owner=$(cat "$lock_dir/pid" 2>/dev/null || true)
+    if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
+      echo "Reclaiming the '$name' lock from dead process $owner..." >&2
+      rm -rf "$lock_dir"
+      continue
+    fi
+    waited=$((waited + 1))
+    [ "$waited" -lt $((timeout * 10)) ] || worktree_die \
+      "Timed out after ${timeout}s waiting for the '$name' lock held by ${owner:-another setup}. If nothing else is running, remove $lock_dir"
+    sleep 0.1
+  done
+
+  printf '%s' "$$" > "$lock_dir/pid"
+  WORKTREE_LOCK_HELD="$lock_dir"
+}
+
+worktree_unlock() {
+  [ -n "$WORKTREE_LOCK_HELD" ] || return 0
+  rm -rf "$WORKTREE_LOCK_HELD"
+  WORKTREE_LOCK_HELD=""
+}
+
 worktree_read_value() {
   local file=$1
   local key=$2
