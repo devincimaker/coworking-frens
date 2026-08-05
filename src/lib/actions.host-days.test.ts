@@ -72,11 +72,17 @@ function openDayRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
+// Mirrors what createDay actually returns — host and the full place included,
+// both of which the calendar links on the success state read.
 function createdDay(audience: { userId: string; email: string }[] = []) {
   return {
     id: "day_1",
+    date: todayBA(),
+    startTime: "09:00",
+    endTime: "17:00",
     description: "",
-    place: { nickname: "El Nido" },
+    host: { name: "Ana Dev" },
+    place: { nickname: "El Nido", address: "Gorriti 4500", arrivalNotes: "" },
     audience: audience.map(({ userId, email }) => ({ userId, user: { email } })),
   };
 }

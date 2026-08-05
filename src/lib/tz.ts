@@ -25,6 +25,27 @@ export function currentTimeBA(): string {
   return hm.format(new Date());
 }
 
+/** What the Buenos Aires wall clock reads at `instant`, re-read as if it were UTC. */
+function baWallClockAsUtc(instant: Date): number {
+  return Date.parse(`${ymd.format(instant)}T${hm.format(instant)}:00Z`);
+}
+
+/**
+ * "2026-08-05" + "09:00" in Buenos Aires → the UTC instant it names. The rest of
+ * the app never needs this — a day is a pair of wall-clock strings and stays that
+ * way — but a calendar file has to pin an actual moment.
+ *
+ * The offset is read out of ICU rather than hardcoded to −03:00: Argentina has had
+ * no DST since 2009, but that is the zone's history, not a promise. The second
+ * pass only earns its keep on a day the offset moves, where the first guess can
+ * land on the far side of the shift and read the wrong one.
+ */
+export function baInstant(date: string, time: string): Date {
+  const wall = Date.parse(`${date}T${time}:00Z`); // the reading, parsed as if UTC
+  const guess = wall - (baWallClockAsUtc(new Date(wall)) - wall);
+  return new Date(wall - (baWallClockAsUtc(new Date(guess)) - guess));
+}
+
 export function addDays(date: string, n: number): string {
   const d = new Date(`${date}T12:00:00Z`); // noon UTC avoids any day-boundary drift
   d.setUTCDate(d.getUTCDate() + n);
