@@ -46,6 +46,22 @@ export function MutualFriendsCount({ people }: { people: MutualFriend[] }) {
   );
 }
 
+// The trust line for someone one hop out on a friends-of-friends day: names the
+// path ("amigo de Valen") instead of leaving a stranger unexplained. Nothing
+// renders when the viewer shares no mutuals — two 2-hop guests can legitimately
+// have no path to each other.
+export function FriendOfLine({ people }: { people: MutualFriend[] }) {
+  if (people.length === 0) return null;
+  const [closest, ...rest] = people;
+
+  return (
+    <span className="font-mono text-[11px] text-faded">
+      amigo de {shortName(closest)}
+      {rest.length > 0 && ` y ${rest.length} más`}
+    </span>
+  );
+}
+
 export function MutualFriendsPanel({ people }: { people: MutualFriend[] }) {
   if (people.length === 0) return null;
   const line = summarize(people);

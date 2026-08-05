@@ -6,6 +6,7 @@ const authMock = vi.hoisted(() => vi.fn());
 const dayForUserMock = vi.hoisted(() => vi.fn());
 const hostedJuntadasForMock = vi.hoisted(() => vi.fn(async () => new Map<string, number>()));
 const friendConnectionStatesMock = vi.hoisted(() => vi.fn());
+const mutualFriendsMock = vi.hoisted(() => vi.fn(async () => new Map()));
 
 vi.mock("next/link", () => ({
   default: ({
@@ -42,6 +43,7 @@ vi.mock("@/lib/queries", () => ({
 
 vi.mock("@/lib/friends", () => ({
   friendConnectionStates: friendConnectionStatesMock,
+  mutualFriends: mutualFriendsMock,
 }));
 
 vi.mock("@/lib/actions", () => ({
@@ -90,6 +92,7 @@ function dayWithAttendees(
     attendances: attendees,
     circle: null,
     rule: null,
+    audienceKind: "friends",
     ...overrides,
   };
 }
@@ -103,6 +106,8 @@ describe("DayPage friend request controls", () => {
     authMock.mockReset();
     dayForUserMock.mockReset();
     friendConnectionStatesMock.mockReset();
+    mutualFriendsMock.mockReset();
+    mutualFriendsMock.mockResolvedValue(new Map());
     authMock.mockResolvedValue({ user: { id: "me" } });
   });
 
@@ -133,6 +138,7 @@ describe("DayPage friend request controls", () => {
     render(await DayPage({ params: Promise.resolve({ id: "day_1" }) }));
 
     expect(friendConnectionStatesMock).toHaveBeenCalledWith("me", [
+      "host",
       "me",
       "none",
       "friend",
@@ -169,5 +175,54 @@ describe("DayPage friend request controls", () => {
     render(await DayPage({ params: Promise.resolve({ id: "day_1" }) }));
 
     expect(screen.getByText("Para “deep work”")).toBeInTheDocument();
+  });
+
+  it("tells the host a friends-of-friends day is open that wide", async () => {
+    dayForUserMock.mockResolvedValue(
+      dayWithAttendees([], { hostId: "me", audienceKind: "friends_of_friends" })
+    );
+
+    render(await DayPage({ params: Promise.resolve({ id: "day_1" }) }));
+
+    expect(screen.getByText("Para amigos de amigos")).toBeInTheDocument();
+    expect(mutualFriendsMock).not.toHaveBeenCalled();
+  });
+
+  it("explains a friends-of-friends day to guests through the mutual connection", async () => {
+    dayForUserMock.mockResolvedValue(
+      dayWithAttendees([attendee("stranger", "Sole Paz")], {
+        audienceKind: "friends_of_friends",
+      })
+    );
+    friendConnectionStatesMock.mockResolvedValue(
+      new Map([
+        ["host", { kind: "none" }],
+        ["stranger", { kind: "none" }],
+      ])
+    );
+    mutualFriendsMock.mockResolvedValue(
+      new Map([
+        ["host", [{ id: "marco", name: "Marco Rey", username: "marco", image: null }]],
+        ["stranger", []],
+      ])
+    );
+
+    render(await DayPage({ params: Promise.resolve({ id: "day_1" }) }));
+
+    expect(mutualFriendsMock).toHaveBeenCalledWith("me", ["host", "stranger"]);
+    expect(screen.getByText("Abierta a amigos de amigos")).toBeInTheDocument();
+    // The host row names the path; the attendee with no shared friend gets no line.
+    expect(screen.getByText(/amigo de Marco/)).toBeInTheDocument();
+    // Not attending yet, so the request controls stay hidden.
+    expect(screen.queryByText("sumar amigo")).not.toBeInTheDocument();
+  });
+
+  it("keeps friends-of-friends copy off ordinary all-friends days", async () => {
+    dayForUserMock.mockResolvedValue(dayWithAttendees([attendee("other", "Other")]));
+
+    render(await DayPage({ params: Promise.resolve({ id: "day_1" }) }));
+
+    expect(screen.queryByText(/amigos de amigos/)).not.toBeInTheDocument();
+    expect(mutualFriendsMock).not.toHaveBeenCalled();
   });
 });

@@ -4,12 +4,19 @@ import { auth } from "@/auth";
 import { dayForUser, hostedJuntadasFor } from "@/lib/queries";
 import { formatDay, todayBA } from "@/lib/tz";
 import { accentFor, stripes } from "@/lib/accent";
-import { friendConnectionStates, type FriendConnectionState } from "@/lib/friends";
+import { AUDIENCE_FRIENDS_OF_FRIENDS, audienceLabel } from "@/lib/audience";
+import {
+  friendConnectionStates,
+  mutualFriends,
+  type FriendConnectionState,
+  type MutualFriend,
+} from "@/lib/friends";
 import { userProfilePath } from "@/lib/profile";
 import { amenitiesFor } from "@/lib/amenities";
 import { AmenityChips } from "@/components/amenity-chips";
 import { Avatar } from "@/components/avatar";
 import { DayOwnerControls } from "@/components/edit-day-form";
+import { FriendOfLine } from "@/components/mutual-friends";
 import {
   acceptFriendRequest,
   declineFriendRequest,
@@ -93,10 +100,6 @@ function AttendeeFriendControl({
   );
 }
 
-function audienceLabel(circleName?: string | null) {
-  return circleName ? `“${circleName}”` : "todos tus amigos";
-}
-
 function profileHref(profileUserId: string, viewerId: string) {
   return profileUserId === viewerId ? "/profile" : userProfilePath(profileUserId);
 }
@@ -122,16 +125,32 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
   const isAttending = day.attendances.some((att) => att.user.id === userId);
   const canRequestAttendees = !isHost && isAttending;
   const selectedCircle = day.circle ?? day.rule?.circle ?? null;
+  const isFof = day.audienceKind === AUDIENCE_FRIENDS_OF_FRIENDS;
+  const showsFofPaths = isFof && !isHost;
   const attendeeIds = day.attendances.map((att) => att.user.id);
   // Ring only in this list — the rows are 32px tall and already carry a name, a
   // request control and a remove button. The number lives on the profile the
   // name links to.
-  const [attendeeFriendStates, attendeesHosted] = await Promise.all([
-    canRequestAttendees
-      ? friendConnectionStates(userId, attendeeIds)
+  // On a friends-of-friends day the connection states are needed even when the
+  // viewer isn't attending: they say which people are one hop out, so those rows
+  // can explain themselves with the mutual friend who links them.
+  const [attendeeFriendStates, attendeesHosted, mutualsByPerson] = await Promise.all([
+    canRequestAttendees || showsFofPaths
+      ? friendConnectionStates(userId, [day.host.id, ...attendeeIds])
       : Promise.resolve(new Map<string, FriendConnectionState>()),
     hostedJuntadasFor(attendeeIds),
+    showsFofPaths
+      ? mutualFriends(userId, [day.host.id, ...attendeeIds])
+      : Promise.resolve(new Map<string, MutualFriend[]>()),
   ]);
+  // Someone the viewer already knows needs no explaining; everyone else gets
+  // the mutual friend who links them. Empty off FoF days since the map is.
+  const friendOfPeople = (personId: string): MutualFriend[] => {
+    const state = attendeeFriendStates.get(personId)?.kind ?? "none";
+    if (state === "self" || state === "friends") return [];
+    return mutualsByPerson.get(personId) ?? [];
+  };
+  const hostFriendOf = friendOfPeople(day.host.id);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -211,17 +230,31 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
                   {isHost ? "Vos" : day.host.name}
                 </span>
               </Link>
-              <div className="font-mono text-[12px] text-faded">anfitrión</div>
+              <div className="font-mono text-[12px] text-faded">
+                anfitrión
+                {hostFriendOf.length > 0 && (
+                  <>
+                    {" · "}
+                    <FriendOfLine people={hostFriendOf} />
+                  </>
+                )}
+              </div>
             </div>
           </div>
           <div className="text-right font-mono text-[12px] text-ink">
             <div>
               {formatDay(day.date)} · {day.startTime}–{day.endTime}
             </div>
-            {isHost && (
+            {/* Guests on a friends-of-friends day get told the door is wider:
+                it explains the unfamiliar names below. */}
+            {isHost ? (
               <div className="mt-1 text-[11px] text-faded">
-                Para {audienceLabel(selectedCircle?.name)}
+                Para {audienceLabel(day.audienceKind, selectedCircle?.name, "todos tus amigos")}
               </div>
+            ) : (
+              isFof && (
+                <div className="mt-1 text-[11px] text-faded">Abierta a amigos de amigos</div>
+              )
             )}
           </div>
           {isHost && !cancelled && (
@@ -260,7 +293,9 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
           <p className="text-sm text-faded">Nadie todavía — sé el primero.</p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {day.attendances.map((att) => (
+            {day.attendances.map((att) => {
+              const friendOf = friendOfPeople(att.user.id);
+              return (
               <li key={att.user.id} className="panel flex flex-wrap items-center gap-3 p-2.5 sm:flex-nowrap">
                 <Link
                   href={profileHref(att.user.id, userId)}
@@ -274,10 +309,12 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
                   />
                   <div className="min-w-0 text-sm font-medium text-ink">
                     <span data-profile-label className="block truncate">{att.user.name}</span>
-                    {att.user.id === userId && (
+                    {att.user.id === userId ? (
                       <span className="font-mono text-[11px]" style={{ color: a.accent }}>
                         vos
                       </span>
+                    ) : (
+                      <FriendOfLine people={friendOf} />
                     )}
                   </div>
                 </Link>
@@ -295,7 +332,8 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
                   </form>
                 )}
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
 

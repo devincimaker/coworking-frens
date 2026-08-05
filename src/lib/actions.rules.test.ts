@@ -3,15 +3,26 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const requireOnboardedUserMock = vi.hoisted(() => vi.fn());
 const sendEmailMock = vi.hoisted(() => vi.fn());
 const materializeRulesMock = vi.hoisted(() => vi.fn());
+const friendsOfMock = vi.hoisted(() => vi.fn());
 const prismaMock = vi.hoisted(() => ({
   availabilityRule: {
+    create: vi.fn(),
     findFirst: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
   },
+  circle: {
+    findFirst: vi.fn(),
+  },
+  circleMember: {
+    findMany: vi.fn(),
+  },
   coworkDay: {
     findMany: vi.fn(),
     update: vi.fn(),
+  },
+  place: {
+    findUnique: vi.fn(),
   },
 }));
 
@@ -23,12 +34,16 @@ vi.mock("@/auth", () => ({
 }));
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/email", () => ({ sendEmail: sendEmailMock }));
+vi.mock("@/lib/friends", () => ({
+  friendsOf: friendsOfMock,
+  friendIdsOf: vi.fn(),
+}));
 vi.mock("@/lib/days", () => ({
   materializeRules: materializeRulesMock,
   createDay: vi.fn(),
 }));
 
-import { deleteRule, toggleRule } from "./actions";
+import { createRule, deleteRule, toggleRule } from "./actions";
 
 function formData(values: Record<string, string>) {
   const data = new FormData();
@@ -112,5 +127,83 @@ describe("pausing a recurring rule", () => {
       expect.stringContaining("El Nido")
     );
     expect(prismaMock.availabilityRule.delete).toHaveBeenCalledWith({ where: { id: "rule_1" } });
+  });
+});
+
+describe("createRule audience selection", () => {
+  const baseForm = () => ({
+    weekdays: "2",
+    startTime: "09:00",
+    endTime: "17:00",
+    capacity: "4",
+    description: "",
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requireOnboardedUserMock.mockResolvedValue({
+      id: "me",
+      name: "Ana Dev",
+      email: "ana@example.com",
+    });
+    prismaMock.place.findUnique.mockResolvedValue({ id: "place_1", nickname: "El Nido" });
+    prismaMock.availabilityRule.create.mockResolvedValue({
+      id: "rule_1",
+      weekdays: "2",
+      description: "",
+    });
+    friendsOfMock.mockResolvedValue([{ email: "amiga@example.com" }]);
+  });
+
+  it("stores the friends-of-friends kind and still announces to direct friends only", async () => {
+    const result = await createRule(
+      { status: "idle", message: "" },
+      formData({ ...baseForm(), audience: "friends_of_friends" })
+    );
+
+    expect(result.status).toBe("success");
+    expect(prismaMock.availabilityRule.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        circleId: null,
+        audienceKind: "friends_of_friends",
+      }),
+    });
+    expect(sendEmailMock).toHaveBeenCalledWith(
+      ["amiga@example.com"],
+      expect.any(String),
+      expect.any(String)
+    );
+  });
+
+  it("keeps circle selections on the friends kind", async () => {
+    prismaMock.circle.findFirst.mockResolvedValue({ id: "circle_1" });
+    prismaMock.circleMember.findMany.mockResolvedValue([
+      { user: { email: "member@example.com" } },
+    ]);
+
+    const result = await createRule(
+      { status: "idle", message: "" },
+      formData({ ...baseForm(), audience: "circle_1" })
+    );
+
+    expect(result.status).toBe("success");
+    expect(prismaMock.availabilityRule.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        circleId: "circle_1",
+        audienceKind: "friends",
+      }),
+    });
+  });
+
+  it("rejects a circle the user does not own", async () => {
+    prismaMock.circle.findFirst.mockResolvedValue(null);
+
+    const result = await createRule(
+      { status: "idle", message: "" },
+      formData({ ...baseForm(), audience: "someone_elses_circle" })
+    );
+
+    expect(result).toEqual({ status: "error", message: "Ese círculo no está disponible." });
+    expect(prismaMock.availabilityRule.create).not.toHaveBeenCalled();
   });
 });

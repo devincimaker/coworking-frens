@@ -54,6 +54,7 @@ model Friendship {
   b         User     @relation("FriendB", fields: [bId], references: [id], onDelete: Cascade)
 
   @@unique([aId, bId])
+  @@index([bId])
 }
 
 // Request lifecycle: pending | accepted | declined.
@@ -139,11 +140,12 @@ model AvailabilityRule {
   weekdays    String // csv of 0(Sun)-6(Sat), e.g. "2,4"
   startTime   String // "09:00"
   endTime     String // "17:00"
-  capacity    Int
-  description String   @default("")
-  circleId    String? // null = all friends
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  capacity     Int
+  description  String   @default("")
+  circleId     String? // null = all friends
+  audienceKind String   @default("friends") // friends | friends_of_friends; circleId overrides
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
 
   host   User        @relation(fields: [hostId], references: [id], onDelete: Cascade)
   circle Circle?     @relation(fields: [circleId], references: [id], onDelete: SetNull)
@@ -164,6 +166,7 @@ model CoworkDay {
   status       String   @default("open") // open | cancelled
   ruleId       String?
   circleId     String?
+  audienceKind String   @default("friends") // friends | friends_of_friends; circleId overrides
   reminderSent Boolean  @default(false)
   createdAt    DateTime @default(now())
 

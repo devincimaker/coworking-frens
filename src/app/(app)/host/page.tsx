@@ -51,6 +51,7 @@ export default async function HostPage() {
         capacity: day.capacity,
         description: day.description,
         circleName: day.circle?.name ?? null,
+        audienceKind: day.audienceKind,
         attendees: day.attendances.map((attendance) => ({
           id: attendance.user.id,
           name: attendance.user.name,
@@ -67,6 +68,7 @@ export default async function HostPage() {
         description: rule.description,
         active: rule.active,
         circleName: rule.circle?.name ?? null,
+        audienceKind: rule.audienceKind,
         openDayCount: rule._count.days,
       }))}
       circles={circles.map((circle) => ({ id: circle.id, name: circle.name }))}
