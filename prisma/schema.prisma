@@ -153,19 +153,20 @@ model AvailabilityRule {
 }
 
 model CoworkDay {
-  id           String   @id @default(cuid())
-  hostId       String
-  placeId      String
-  date         String // "2026-07-21" (Argentina local)
-  startTime    String // "09:00"
-  endTime      String // "17:00"
-  capacity     Int
-  description  String   @default("")
-  status       String   @default("open") // open | cancelled
-  ruleId       String?
-  circleId     String?
-  reminderSent Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  id                 String   @id @default(cuid())
+  hostId             String
+  placeId            String
+  date               String // "2026-07-21" (Argentina local)
+  startTime          String // "09:00"
+  endTime            String // "17:00"
+  capacity           Int
+  description        String   @default("")
+  status             String   @default("open") // open | cancelled
+  cancellationReason String?
+  ruleId             String?
+  circleId           String?
+  reminderSent       Boolean  @default(false)
+  createdAt          DateTime @default(now())
 
   host           User              @relation(fields: [hostId], references: [id], onDelete: Cascade)
   place          Place             @relation(fields: [placeId], references: [id], onDelete: Cascade)

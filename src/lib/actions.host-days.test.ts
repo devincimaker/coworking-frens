@@ -20,7 +20,7 @@ vi.mock("@/auth", () => ({
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/email", () => ({ sendEmail: sendEmailMock }));
 
-import { updateDay } from "./actions";
+import { cancelDay, updateDay } from "./actions";
 import { todayBA } from "./tz";
 
 function formData(values: Record<string, string>) {
@@ -116,5 +116,63 @@ describe("updateDay chair count", () => {
       where: { id: "day_1" },
       data: expect.objectContaining({ capacity: 3 }),
     });
+  });
+});
+
+describe("cancelDay reason", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requireOnboardedUserMock.mockResolvedValue({
+      id: "me",
+      name: "Ana Dev",
+      email: "ana@example.com",
+    });
+    prismaMock.coworkDay.findFirst.mockResolvedValue(
+      openDayRow({ attendances: [{ user: { email: "marco@example.com" } }] })
+    );
+  });
+
+  it("cancels without a reason exactly as before", async () => {
+    await cancelDay(formData({ dayId: "day_1" }));
+
+    expect(prismaMock.coworkDay.update).toHaveBeenCalledWith({
+      where: { id: "day_1" },
+      data: { status: "cancelled", cancellationReason: null },
+    });
+    expect(sendEmailMock).toHaveBeenCalledWith(
+      ["marco@example.com"],
+      expect.stringContaining("Cancelada"),
+      expect.not.stringContaining("Motivo:")
+    );
+  });
+
+  it("stores a trimmed reason and adds it to the email", async () => {
+    await cancelDay(formData({ dayId: "day_1", cancellationReason: "  Me enfermé  " }));
+
+    expect(prismaMock.coworkDay.update).toHaveBeenCalledWith({
+      where: { id: "day_1" },
+      data: { status: "cancelled", cancellationReason: "Me enfermé" },
+    });
+    expect(sendEmailMock).toHaveBeenCalledWith(
+      ["marco@example.com"],
+      expect.stringContaining("Cancelada"),
+      expect.stringContaining("Motivo: Me enfermé")
+    );
+  });
+
+  it("treats a whitespace-only reason as none", async () => {
+    await cancelDay(formData({ dayId: "day_1", cancellationReason: "   " }));
+
+    expect(prismaMock.coworkDay.update).toHaveBeenCalledWith({
+      where: { id: "day_1" },
+      data: { status: "cancelled", cancellationReason: null },
+    });
+  });
+
+  it("truncates a reason longer than 280 characters", async () => {
+    await cancelDay(formData({ dayId: "day_1", cancellationReason: "x".repeat(300) }));
+
+    const { data } = prismaMock.coworkDay.update.mock.calls[0][0];
+    expect(data.cancellationReason).toHaveLength(280);
   });
 });

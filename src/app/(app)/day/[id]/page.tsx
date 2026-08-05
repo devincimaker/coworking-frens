@@ -189,8 +189,11 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
 
       <div className="mt-5">
         {cancelled && (
-          <div className="mb-4 rounded-2xl border border-clay/40 bg-clay/5 px-4 py-3 text-sm font-semibold text-clay">
-            Esta juntada fue cancelada.
+          <div className="mb-4 rounded-2xl border border-clay/40 bg-clay/5 px-4 py-3 text-sm text-clay">
+            <p className="font-semibold">Esta juntada fue cancelada.</p>
+            {day.cancellationReason && (
+              <p className="mt-1 leading-relaxed">“{day.cancellationReason}”</p>
+            )}
           </div>
         )}
 

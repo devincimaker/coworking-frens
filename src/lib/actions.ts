@@ -76,6 +76,7 @@ type HostDayFormState = ProfileFormState;
 const MAX_PLACE_PHOTOS = 9;
 const MAX_DAY_DESCRIPTION_LENGTH = 280;
 const MAX_PLACE_TEXT = 240;
+const MAX_CANCELLATION_REASON_LENGTH = 280;
 
 const parseCapacity = (raw: FormDataEntryValue | null, fallback = 4) =>
   Math.min(MAX_DAY_CAPACITY, Math.max(1, Number(raw ?? fallback) || fallback));
@@ -246,10 +247,12 @@ function normalizePlacePhotoUrls(entries: FormDataEntryValue[]) {
   return { ok: true as const, urls };
 }
 
-function optionalPlaceText(raw: FormDataEntryValue | null) {
-  const value = String(raw ?? "").trim();
+function optionalText(raw: FormDataEntryValue | null, max: number) {
+  const value = String(raw ?? "")
+    .replace(/\r\n?/g, "\n")
+    .trim();
   if (!value) return null;
-  return value.slice(0, MAX_PLACE_TEXT);
+  return value.slice(0, max);
 }
 
 function parseCoordinate(raw: FormDataEntryValue | null, min: number, max: number) {
@@ -267,7 +270,7 @@ function normalizePlaceAddress(formData: FormData) {
     return { ok: false as const, message: "La dirección tiene que tener menos de 240 caracteres." };
   }
 
-  const googlePlaceId = optionalPlaceText(formData.get("googlePlaceId"));
+  const googlePlaceId = optionalText(formData.get("googlePlaceId"), MAX_PLACE_TEXT);
   if (!googlePlaceId) {
     return {
       ok: true as const,
@@ -302,12 +305,12 @@ function normalizePlaceAddress(formData: FormData) {
       googlePlaceId,
       latitude,
       longitude,
-      addressLine1: optionalPlaceText(formData.get("addressLine1")),
-      addressNeighborhood: optionalPlaceText(formData.get("addressNeighborhood")),
-      addressCity: optionalPlaceText(formData.get("addressCity")),
-      addressRegion: optionalPlaceText(formData.get("addressRegion")),
-      addressCountry: optionalPlaceText(formData.get("addressCountry")),
-      addressPostalCode: optionalPlaceText(formData.get("addressPostalCode")),
+      addressLine1: optionalText(formData.get("addressLine1"), MAX_PLACE_TEXT),
+      addressNeighborhood: optionalText(formData.get("addressNeighborhood"), MAX_PLACE_TEXT),
+      addressCity: optionalText(formData.get("addressCity"), MAX_PLACE_TEXT),
+      addressRegion: optionalText(formData.get("addressRegion"), MAX_PLACE_TEXT),
+      addressCountry: optionalText(formData.get("addressCountry"), MAX_PLACE_TEXT),
+      addressPostalCode: optionalText(formData.get("addressPostalCode"), MAX_PLACE_TEXT),
     },
   };
 }
@@ -527,16 +530,25 @@ export async function updateDay(
 export async function cancelDay(formData: FormData) {
   const user = await requireOnboardedUser();
   const dayId = String(formData.get("dayId"));
+  const cancellationReason = optionalText(
+    formData.get("cancellationReason"),
+    MAX_CANCELLATION_REASON_LENGTH
+  );
   const day = await prisma.coworkDay.findFirst({
     where: { id: dayId, hostId: user.id, status: "open" },
     include: { attendances: { include: { user: true } }, place: true },
   });
   if (!day) throw new Error("Day not found");
-  await prisma.coworkDay.update({ where: { id: day.id }, data: { status: "cancelled" } });
+  await prisma.coworkDay.update({
+    where: { id: day.id },
+    data: { status: "cancelled", cancellationReason },
+  });
   await sendEmail(
     day.attendances.map((a) => a.user.email),
     `Cancelada: ${day.place.nickname} el ${formatDay(day.date)}`,
-    `${user.name} canceló la juntada en ${day.place.nickname} el ${formatDay(day.date)}. ¡Perdón!\n\n${appUrl()}/juntadas`
+    `${user.name} canceló la juntada en ${day.place.nickname} el ${formatDay(day.date)}. ¡Perdón!` +
+      (cancellationReason ? `\n\nMotivo: ${cancellationReason}` : "") +
+      `\n\n${appUrl()}/juntadas`
   );
   revalidateAll();
 }
