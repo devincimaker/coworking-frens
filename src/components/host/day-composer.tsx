@@ -10,6 +10,7 @@ import {
   weekdayOf,
   WEEKDAY_PLURAL,
 } from "@/lib/tz";
+import { AddToCalendar } from "@/components/add-to-calendar";
 import { NumberStepper } from "@/components/host/number-stepper";
 import { MinimizeIcon } from "@/components/host/icons";
 import type { HostCircle, HostFormState } from "@/components/host/types";
@@ -131,16 +132,18 @@ export function DayComposer({
         </div>
       )}
 
-      {/* A day that just opened still owes you a word, even with the card folded. */}
+      {/* A day that just opened still owes you a word, even with the card folded —
+          and, if it is a single dated day, somewhere to put it. */}
       {!open && state.message && (
-        <p
+        <div
           aria-live="polite"
-          className={`mt-3 rounded-xl px-3 py-2 text-sm font-bold ${
+          className={`mt-3 rounded-xl px-3 py-2 ${
             state.status === "success" ? "bg-olive/10 text-olive" : "bg-clay/10 text-clay"
           }`}
         >
-          {state.message}
-        </p>
+          <p className="text-sm font-bold">{state.message}</p>
+          {state.calendar && <AddToCalendar className="mt-2.5" {...state.calendar} />}
+        </div>
       )}
 
       <form

@@ -35,6 +35,14 @@ import {
   TERMS_REQUIRED_MESSAGE,
   TERMS_VERSION,
 } from "@/lib/terms";
+import {
+  buildIcs,
+  calendarEventFor,
+  calendarLinksFor,
+  googleCalendarUrl,
+  type CalendarDay,
+  type CalendarLinks,
+} from "@/lib/calendar";
 import { CIRCLE_NAME_MAX, type CreateCircleState } from "@/lib/circles";
 import { MAX_DAY_CAPACITY } from "@/lib/place";
 import { formatDay, todayBA, weekdayOf, WEEKDAY_PLURAL } from "@/lib/tz";
@@ -72,7 +80,14 @@ type ProfileFormState = {
 };
 
 type PlaceFormState = ProfileFormState;
-type HostDayFormState = ProfileFormState;
+type HostDayFormState = ProfileFormState & {
+  /**
+   * Only the actions that open one dated juntada set this, so the host can put it
+   * straight in their calendar. Never set for a recurring rule: an open-ended
+   * series would keep painting a calendar after the rule was switched off.
+   */
+  calendar?: CalendarLinks;
+};
 
 const MAX_PLACE_PHOTOS = 9;
 const MAX_DAY_DESCRIPTION_LENGTH = 280;
@@ -406,6 +421,7 @@ export async function createOneOffDay(
   return {
     status: "success",
     message: `Listo, nueva juntada abierta para ${formatDay(date)}. Ya aparece en tus próximas juntadas.`,
+    calendar: calendarLinksFor(day),
   };
 }
 
@@ -558,10 +574,34 @@ export async function cancelDay(formData: FormData) {
   revalidateAll();
 }
 
+/** The joiner's own copy: what they signed up for, with the event attached. */
+function joinConfirmation(day: CalendarDay & { startTime: string; endTime: string }) {
+  const event = calendarEventFor(day);
+  const where = day.place.address.trim();
+  const notes = day.place.arrivalNotes.trim();
+
+  return {
+    subject: `Ya estás anotado: ${day.place.nickname}, ${formatDay(day.date)}`,
+    text: [
+      `Listo, tenés lugar en ${day.place.nickname} el ${formatDay(day.date)}, ${day.startTime}–${day.endTime}.`,
+      where ? `Dónde: ${where}` : "",
+      notes ? `Cómo llegar: ${notes}` : "",
+      `Agregala a tu calendario: el archivo .ics va adjunto, o abrila en Google Calendar:\n${googleCalendarUrl(event)}`,
+      `Quiénes van y el resto de los detalles: ${appUrl()}/day/${day.id}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+    attachment: {
+      filename: `juntada-${day.date}.ics`,
+      content: buildIcs(event, new Date()),
+    },
+  };
+}
+
 export async function joinDay(formData: FormData) {
   const user = await requireOnboardedUser();
   const dayId = String(formData.get("dayId"));
-  const day = await prisma.$transaction(async (tx) => {
+  const { day, joined } = await prisma.$transaction(async (tx) => {
     const day = await tx.coworkDay.findFirst({
       where: {
         id: dayId,
@@ -573,16 +613,34 @@ export async function joinDay(formData: FormData) {
       include: { attendances: true, host: true, place: true },
     });
     if (!day) throw new Error("Day not available");
-    if (day.attendances.some((a) => a.userId === user.id)) return day;
+    // A double tap, or a replayed form, must not read as a second arrival.
+    if (day.attendances.some((a) => a.userId === user.id)) return { day, joined: false };
     if (day.attendances.length >= day.capacity) throw new Error("Day is full");
     await tx.attendance.create({ data: { dayId: day.id, userId: user.id } });
-    return day;
+    return { day, joined: true };
   });
-  await sendEmail(
-    [day.host.email],
-    `${first(user.name)} se suma ${formatDay(day.date)}`,
-    `${user.name} agarró un lugar en ${day.place.nickname} el ${formatDay(day.date)}, ${day.startTime}–${day.endTime}.\n\n${appUrl()}/day/${day.id}`
-  );
+
+  if (joined) {
+    await sendEmail(
+      [day.host.email],
+      `${first(user.name)} se suma ${formatDay(day.date)}`,
+      `${user.name} agarró un lugar en ${day.place.nickname} el ${formatDay(day.date)}, ${day.startTime}–${day.endTime}.\n\n${appUrl()}/day/${day.id}`
+    );
+
+    // The seat is already committed. sendEmail swallows its own failures, but
+    // building the event is new work that can throw on data we did not foresee —
+    // and nobody should lose their place because a calendar file would not
+    // assemble. Whatever happens here, they are going.
+    try {
+      const confirmation = joinConfirmation(day);
+      await sendEmail([user.email], confirmation.subject, confirmation.text, {
+        attachments: [confirmation.attachment],
+      });
+    } catch (err) {
+      console.error("join confirmation failed", err instanceof Error ? err.message : err);
+    }
+  }
+
   revalidateAll();
 }
 

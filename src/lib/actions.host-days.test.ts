@@ -140,11 +140,17 @@ describe("createOneOffDay audience selection", () => {
     description: "",
   });
 
+  // Mirrors what createDay actually returns — it includes host and the full place,
+  // both of which the calendar links read.
   function createdDay(audience: { userId: string; email: string }[]) {
     return {
       id: "day_1",
+      date: "2026-08-05",
+      startTime: "09:00",
+      endTime: "17:00",
       description: "",
-      place: { nickname: "El Nido" },
+      host: { name: "Ana Dev" },
+      place: { nickname: "El Nido", address: "Gorriti 4500", arrivalNotes: "" },
       audience: audience.map(({ userId, email }) => ({ userId, user: { email } })),
     };
   }

@@ -1,9 +1,18 @@
 // The host screen is one client island — the server page hands it plain data.
 
+import type { CalendarLinks } from "@/lib/calendar";
+
 /** What every host-side server action resolves to, for useActionState. */
 export type HostFormState = {
   status: "idle" | "success" | "error";
   message: string;
+  /**
+   * Set only by the actions that open a single dated juntada, so the host can put
+   * it in their own calendar without going to the day page. Absent for a
+   * recurring rule: an open-ended series would keep painting a calendar long
+   * after the rule was switched off.
+   */
+  calendar?: CalendarLinks;
 };
 
 export type HostPerson = {

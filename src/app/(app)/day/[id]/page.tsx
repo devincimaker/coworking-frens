@@ -13,6 +13,8 @@ import {
 } from "@/lib/friends";
 import { userProfilePath } from "@/lib/profile";
 import { amenitiesFor } from "@/lib/amenities";
+import { calendarLinksFor } from "@/lib/calendar";
+import { AddToCalendar } from "@/components/add-to-calendar";
 import { AmenityChips } from "@/components/amenity-chips";
 import { Avatar } from "@/components/avatar";
 import { DayOwnerControls } from "@/components/edit-day-form";
@@ -124,6 +126,9 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
   const hasSetup = amenitiesFor(day.place.amenityKeys).length > 0;
   const isAttending = day.attendances.some((att) => att.user.id === userId);
   const canRequestAttendees = !isHost && isAttending;
+  // Only for people who are actually going — the host included, since it is their
+  // day too. Someone still deciding has nothing to put in a calendar yet.
+  const calendarLinks = !cancelled && (isAttending || isHost) ? calendarLinksFor(day) : null;
   const selectedCircle = day.circle ?? day.rule?.circle ?? null;
   const isFof = day.audienceKind === AUDIENCE_FRIENDS_OF_FRIENDS;
   const showsFofPaths = isFof && !isHost;
@@ -420,6 +425,8 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
             )}
           </div>
         )}
+
+        {calendarLinks && <AddToCalendar className="mt-6" {...calendarLinks} />}
       </div>
     </div>
   );

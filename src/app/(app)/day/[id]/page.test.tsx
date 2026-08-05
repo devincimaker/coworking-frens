@@ -226,3 +226,78 @@ describe("DayPage friend request controls", () => {
     expect(mutualFriendsMock).not.toHaveBeenCalled();
   });
 });
+
+// The offer belongs to people who are going. Someone still deciding has nothing
+// to put in a calendar, and a cancelled day would plant a ghost in it.
+describe("DayPage add to calendar", () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    authMock.mockReset();
+    dayForUserMock.mockReset();
+    friendConnectionStatesMock.mockReset();
+    mutualFriendsMock.mockReset();
+    mutualFriendsMock.mockResolvedValue(new Map());
+    friendConnectionStatesMock.mockResolvedValue(new Map());
+    authMock.mockResolvedValue({ user: { id: "me" } });
+    vi.stubEnv("APP_URL", "https://frens.example");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function google() {
+    return screen.queryByRole("link", { name: /Google Calendar/ });
+  }
+
+  function ics() {
+    return screen.queryByRole("link", { name: /Apple/ });
+  }
+
+  it("offers both destinations once you are going", async () => {
+    dayForUserMock.mockResolvedValue(dayWithAttendees([attendee("me", "Ana")]));
+
+    render(await DayPage({ params: Promise.resolve({ id: "day_1" }) }));
+
+    expect(ics()).toHaveAttribute("href", "/api/day/day_1/ics");
+
+    const link = new URL(google()?.getAttribute("href") ?? "");
+    expect(link.host).toBe("calendar.google.com");
+    expect(link.searchParams.get("text")).toBe("Juntada en Casa Thames");
+    expect(link.searchParams.get("dates")).toBe("20260728T090000/20260728T170000");
+    expect(link.searchParams.get("ctz")).toBe("America/Argentina/Buenos_Aires");
+    expect(link.searchParams.get("location")).toBe("Thames 123");
+  });
+
+  it("offers it to the host on their own day", async () => {
+    dayForUserMock.mockResolvedValue(dayWithAttendees([], { hostId: "me" }));
+
+    render(await DayPage({ params: Promise.resolve({ id: "day_1" }) }));
+
+    expect(google()).toBeInTheDocument();
+    expect(ics()).toBeInTheDocument();
+  });
+
+  it("stays hidden while you are still deciding", async () => {
+    dayForUserMock.mockResolvedValue(dayWithAttendees([attendee("other", "Other")]));
+
+    render(await DayPage({ params: Promise.resolve({ id: "day_1" }) }));
+
+    expect(screen.getByText("Sumarme")).toBeInTheDocument();
+    expect(google()).not.toBeInTheDocument();
+    expect(ics()).not.toBeInTheDocument();
+  });
+
+  it("disappears when the day is cancelled, even for someone who was going", async () => {
+    dayForUserMock.mockResolvedValue(
+      dayWithAttendees([attendee("me", "Ana")], { status: "cancelled" })
+    );
+
+    render(await DayPage({ params: Promise.resolve({ id: "day_1" }) }));
+
+    expect(screen.getByText("Esta juntada fue cancelada.")).toBeInTheDocument();
+    expect(google()).not.toBeInTheDocument();
+    expect(ics()).not.toBeInTheDocument();
+  });
+});
