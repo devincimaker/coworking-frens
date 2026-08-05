@@ -56,9 +56,15 @@ worktree, then plans the change with you.
   isolated without a slow fresh install.
 - If the project gains another long-running local server, extend the allocator and
   `.env.worktree` metadata so every linked checkout gets a distinct port for it.
-- When asked to publish work, commit only the current task's changes, push the
-  worktree branch, and open a PR. Merge only when the user asks, then run cleanup
-  from the primary checkout.
+- **When the user says push, push — do not counter-propose.** Work sitting in the
+  primary checkout on `main` gets committed and pushed straight to `main`: no new
+  branch, no PR, no asking first. `main` deploying is the point, not a reason to
+  route around it. Inventing a branch just leaves the user holding one more thing
+  to remember to merge.
+- Work started in a linked worktree is already on its own branch, so there push
+  the branch and open a PR. Merge it when asked, first time, without re-opening
+  the question. Then run cleanup from the primary checkout.
+- Either way, commit only the current task's changes.
 
 ## Theming
 
