@@ -164,6 +164,21 @@ describe("DayPage friend request controls", () => {
     expect(screen.getByText("Sumarme")).toBeInTheDocument();
   });
 
+  it("shows the cancellation reason on a cancelled day", async () => {
+    dayForUserMock.mockResolvedValue(
+      dayWithAttendees([attendee("other", "Other")], {
+        status: "cancelled",
+        cancellationReason: "Me enfermé",
+      })
+    );
+
+    render(await DayPage({ params: Promise.resolve({ id: "day_1" }) }));
+
+    expect(screen.getByText("Esta juntada fue cancelada.")).toBeInTheDocument();
+    expect(screen.getByText("“Me enfermé”")).toBeInTheDocument();
+    expect(screen.queryByText("Sumarme")).not.toBeInTheDocument();
+  });
+
   it("shows the selected circle to the host", async () => {
     dayForUserMock.mockResolvedValue(
       dayWithAttendees([attendee("guest", "Guest")], {

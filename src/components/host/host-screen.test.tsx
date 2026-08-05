@@ -1,5 +1,5 @@
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { HostDayData, HostPlaceData } from "@/components/host/types";
 
@@ -26,6 +26,7 @@ vi.mock("@/components/google-address-picker", () => ({
   GoogleAddressPicker: () => null,
 }));
 
+import { cancelDay } from "@/lib/actions";
 import { HostScreen } from "@/components/host/host-screen";
 
 const place: HostPlaceData = {
@@ -138,5 +139,22 @@ describe("a day with every chair taken", () => {
     expect(screen.getByText("2 lugares")).toBeInTheDocument();
     expect(screen.queryByText("Completo")).not.toBeInTheDocument();
     expect(screen.queryByText(/Sumá una silla desde el lápiz/)).not.toBeInTheDocument();
+  });
+});
+
+describe("cancelling a day", () => {
+  it("passes the optional reason along to the action", async () => {
+    renderHost({ days: [fullDay] });
+
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar el día/ }));
+    fireEvent.change(screen.getByLabelText("Motivo de la cancelación (opcional)"), {
+      target: { value: "Me enfermé" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Sí, cancelar" }));
+
+    await waitFor(() => expect(cancelDay).toHaveBeenCalled());
+    const data = vi.mocked(cancelDay).mock.calls[0][0];
+    expect(data.get("dayId")).toBe("day_1");
+    expect(data.get("cancellationReason")).toBe("Me enfermé");
   });
 });
