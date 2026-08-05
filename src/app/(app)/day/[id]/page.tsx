@@ -15,6 +15,7 @@ import { userProfilePath } from "@/lib/profile";
 import { amenitiesFor } from "@/lib/amenities";
 import { calendarLinksFor } from "@/lib/calendar";
 import { AddToCalendar } from "@/components/add-to-calendar";
+import { JoinDayButton } from "@/components/join-day";
 import { AmenityChips } from "@/components/amenity-chips";
 import { Avatar } from "@/components/avatar";
 import { DayOwnerControls } from "@/components/edit-day-form";
@@ -23,7 +24,6 @@ import {
   acceptFriendRequest,
   declineFriendRequest,
   removeAttendee,
-  joinDay,
   leaveDay,
   sendFriendRequestFromDay,
 } from "@/lib/actions";
@@ -413,15 +413,14 @@ export default async function DayPage({ params }: { params: Promise<{ id: string
                 Completo
               </div>
             ) : (
-              <form action={joinDay}>
-                <input type="hidden" name="dayId" value={day.id} />
-                <button
-                  className="w-full rounded-2xl py-3.5 text-base font-semibold text-on-action transition-transform active:scale-[0.99]"
-                  style={{ backgroundColor: a.accent, boxShadow: `0 12px 24px -12px ${a.accent}` }}
-                >
-                  Sumarme
-                </button>
-              </form>
+              <JoinDayButton
+                dayId={day.id}
+                variant="detail"
+                className="w-full rounded-2xl py-3.5 text-base font-semibold text-on-action transition-transform active:scale-[0.99]"
+                style={{ backgroundColor: a.accent, boxShadow: `0 12px 24px -12px ${a.accent}` }}
+              >
+                Sumarme
+              </JoinDayButton>
             )}
           </div>
         )}

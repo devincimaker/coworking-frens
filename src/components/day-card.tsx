@@ -6,7 +6,8 @@ import { AmenityChips } from "@/components/amenity-chips";
 import { areaLabel } from "@/lib/place";
 import { userProfilePath } from "@/lib/profile";
 import { formatDay } from "@/lib/tz";
-import { joinDay, leaveDay } from "@/lib/actions";
+import { leaveDay } from "@/lib/actions";
+import { JoinDayButton } from "@/components/join-day";
 
 type Person = { id: string; name: string | null; image: string | null };
 
@@ -82,12 +83,9 @@ export function JoinControls({ day, userId }: { day: DayWithRelations; userId: s
       </form>
     );
   return (
-    <form action={joinDay}>
-      <input type="hidden" name="dayId" value={day.id} />
-      <button className="btn-primary" disabled={full}>
-        {full ? "Completo" : "Sumarme"}
-      </button>
-    </form>
+    <JoinDayButton dayId={day.id} variant="feed" className="btn-primary" disabled={full}>
+      {full ? "Completo" : "Sumarme"}
+    </JoinDayButton>
   );
 }
 
@@ -122,15 +120,16 @@ function FeedJoinButton({
       </div>
     );
   return (
-    <form action={joinDay} className="mt-3">
-      <input type="hidden" name="dayId" value={day.id} />
-      <button
+    <div className="mt-3">
+      <JoinDayButton
+        dayId={day.id}
+        variant="feed"
         className="w-full rounded-[13px] py-2.5 text-sm font-semibold text-on-action transition-transform active:scale-[0.98]"
         style={{ backgroundColor: accent, boxShadow: `0 8px 16px -10px ${accent}` }}
       >
         Sumarme
-      </button>
-    </form>
+      </JoinDayButton>
+    </div>
   );
 }
 

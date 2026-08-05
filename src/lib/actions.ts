@@ -598,7 +598,18 @@ function joinConfirmation(day: CalendarDay & { startTime: string; endTime: strin
   };
 }
 
-export async function joinDay(formData: FormData) {
+/**
+ * What the join hands back so the moment can be confirmed on screen. Null when
+ * nothing happened — you were already going — so a replay stays silent.
+ */
+export type JoinResult = {
+  place: string;
+  /** "Jue 6 ago · 10:00–18:00" — mono, the way every time reads in the app. */
+  when: string;
+  calendar: CalendarLinks;
+} | null;
+
+export async function joinDay(formData: FormData): Promise<JoinResult> {
   const user = await requireOnboardedUser();
   const dayId = String(formData.get("dayId"));
   const { day, joined } = await prisma.$transaction(async (tx) => {
@@ -620,28 +631,40 @@ export async function joinDay(formData: FormData) {
     return { day, joined: true };
   });
 
-  if (joined) {
-    await sendEmail(
-      [day.host.email],
-      `${first(user.name)} se suma ${formatDay(day.date)}`,
-      `${user.name} agarró un lugar en ${day.place.nickname} el ${formatDay(day.date)}, ${day.startTime}–${day.endTime}.\n\n${appUrl()}/day/${day.id}`
-    );
-
-    // The seat is already committed. sendEmail swallows its own failures, but
-    // building the event is new work that can throw on data we did not foresee —
-    // and nobody should lose their place because a calendar file would not
-    // assemble. Whatever happens here, they are going.
-    try {
-      const confirmation = joinConfirmation(day);
-      await sendEmail([user.email], confirmation.subject, confirmation.text, {
-        attachments: [confirmation.attachment],
-      });
-    } catch (err) {
-      console.error("join confirmation failed", err instanceof Error ? err.message : err);
-    }
+  if (!joined) {
+    revalidateAll();
+    return null;
   }
 
-  revalidateAll();
+  await sendEmail(
+    [day.host.email],
+    `${first(user.name)} se suma ${formatDay(day.date)}`,
+    `${user.name} agarró un lugar en ${day.place.nickname} el ${formatDay(day.date)}, ${day.startTime}–${day.endTime}.\n\n${appUrl()}/day/${day.id}`
+  );
+
+  // The seat is already committed. sendEmail swallows its own failures, but
+  // building the event is new work that can throw on data we did not foresee —
+  // and nobody should lose their place because a calendar file would not
+  // assemble. Whatever happens here, they are going.
+  try {
+    const confirmation = joinConfirmation(day);
+    await sendEmail([user.email], confirmation.subject, confirmation.text, {
+      attachments: [confirmation.attachment],
+    });
+  } catch (err) {
+    console.error("join confirmation failed", err instanceof Error ? err.message : err);
+  }
+
+  // Deliberately no revalidateAll() here. Revalidating re-renders the join
+  // button as "✓ Vas", which would tear down the calendar row this result is
+  // for before anyone saw it — the offer lives in the button's own place, so
+  // the button has to survive until the offer is answered. The client refreshes
+  // when it settles instead. The seat itself is already committed either way.
+  return {
+    place: day.place.nickname,
+    when: `${formatDay(day.date)} · ${day.startTime}–${day.endTime}`,
+    calendar: calendarLinksFor(day),
+  };
 }
 
 export async function leaveDay(formData: FormData) {

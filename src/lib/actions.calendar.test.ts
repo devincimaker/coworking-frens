@@ -34,7 +34,7 @@ vi.mock("@/lib/friends", () => ({
 }));
 
 import { createOneOffDay, joinDay, openDay } from "./actions";
-import { todayBA } from "./tz";
+import { formatDay, todayBA } from "./tz";
 
 const JOINER = { id: "user_1", name: "Lea Ruiz", email: "lea@example.com" };
 
@@ -141,12 +141,34 @@ describe("joinDay confirmation", () => {
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error("smtp down"));
 
-    await expect(joinDay(formData({ dayId: "day_1" }))).resolves.toBeUndefined();
+    const result = await joinDay(formData({ dayId: "day_1" }));
+
     expect(prismaMock.attendance.create).toHaveBeenCalledWith({
       data: { dayId: "day_1", userId: JOINER.id },
     });
+    // And the confirmation still reaches the screen, which is now the only copy
+    // of the calendar links they are going to get.
+    expect(result?.calendar.icsHref).toBe("/api/day/day_1/ics");
     expect(console.error).toHaveBeenCalledWith("join confirmation failed", "smtp down");
     vi.mocked(console.error).mockRestore();
+  });
+
+  it("hands back the place, the time and both links to confirm on screen", async () => {
+    const result = await joinDay(formData({ dayId: "day_1" }));
+
+    expect(result?.place).toBe("El Nido");
+    expect(result?.when).toBe(`${formatDay(todayBA())} · 09:00–17:00`);
+    expect(result?.calendar.icsHref).toBe("/api/day/day_1/ics");
+    expect(new URL(result?.calendar.googleHref ?? "").host).toBe("calendar.google.com");
+  });
+
+  // Null is what keeps the dialog from opening a second time on a replayed form.
+  it("hands back nothing when the person was already going", async () => {
+    prismaMock.coworkDay.findFirst.mockResolvedValue(
+      joinableDay({ attendances: [{ userId: JOINER.id }] })
+    );
+
+    await expect(joinDay(formData({ dayId: "day_1" }))).resolves.toBeNull();
   });
 
   it("still refuses a full day", async () => {

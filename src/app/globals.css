@@ -479,6 +479,20 @@ body {
     background-image: var(--invite-wash);
   }
 
+  /* The calendar row that takes the join button's place the moment you join.
+     It replaces rather than covers, so it needs to arrive without the page
+     jumping under a thumb: one short rise, the distance of a press. The
+     reduced-motion block above collapses it to nothing. */
+  @keyframes calendar-row-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  .calendar-row {
+    animation: calendar-row-in 180ms ease;
+  }
+
   /* Surfaces */
   .card {
     @apply rounded-[22px] border border-line bg-surface shadow-surface;

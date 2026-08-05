@@ -30,6 +30,8 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn((path: string) => {
     throw new Error(`NEXT_REDIRECT:${path}`);
   }),
+  // The join button refreshes the page itself once the calendar question is answered.
+  useRouter: () => ({ refresh: vi.fn() }),
 }));
 
 vi.mock("@/auth", () => ({
