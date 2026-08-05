@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { cancelDay, updateDay } from "@/lib/actions";
+import { CancelReasonField } from "@/components/cancel-reason-field";
 
 type EditableDay = {
   id: string;
@@ -66,25 +67,11 @@ function XIcon() {
   );
 }
 
-function SaveButton() {
+function PendingButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
     <button className="btn-primary" disabled={pending}>
-      {pending ? "Guardando..." : "Guardar cambios"}
-    </button>
-  );
-}
-
-function CancelButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      aria-label="Cancelar juntada"
-      title="Cancelar juntada"
-      className={`${iconButtonBaseClass} ${inactiveIconButtonClass} hover:bg-clay/10 hover:text-clay`}
-      disabled={pending}
-    >
-      <XIcon />
+      {pending ? pendingLabel : label}
     </button>
   );
 }
@@ -117,22 +104,31 @@ export function DayOwnerControls({
   formClassName?: string;
   successClassName?: string;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [panel, setPanel] = useState<"none" | "edit" | "cancel">("none");
   const [showSuccess, setShowSuccess] = useState(false);
   const [state, setState] = useState<FormState>(initialState);
   const dateId = `edit-day-${day.id}-date`;
   const startId = `edit-day-${day.id}-start`;
   const endId = `edit-day-${day.id}-end`;
   const descriptionId = `edit-day-${day.id}-description`;
+  const cancelReasonId = `edit-day-${day.id}-cancel-reason`;
 
   async function handleUpdateDay(formData: FormData) {
     setShowSuccess(false);
     const result = await updateDay(initialState, formData);
     setState(result);
     if (result.status !== "success") return;
-    setEditing(false);
+    setPanel("none");
     setShowSuccess(true);
   }
+
+  function togglePanel(target: "edit" | "cancel") {
+    setShowSuccess(false);
+    setPanel((open) => (open === target ? "none" : target));
+  }
+
+  const editing = panel === "edit";
+  const confirmingCancel = panel === "cancel";
 
   return (
     <div className={className}>
@@ -146,23 +142,51 @@ export function DayOwnerControls({
           className={`${iconButtonBaseClass} ${
             editing ? activeEditButtonClass : inactiveIconButtonClass
           }`}
-          onClick={() => {
-            setShowSuccess(false);
-            setEditing((open) => !open);
-          }}
+          onClick={() => togglePanel("edit")}
         >
           <PencilIcon />
         </button>
-        <form action={cancelDay}>
-          <input type="hidden" name="dayId" value={day.id} />
-          <CancelButton />
-        </form>
+        <button
+          type="button"
+          aria-label={confirmingCancel ? "Cerrar cancelación" : "Cancelar juntada"}
+          aria-expanded={confirmingCancel}
+          aria-pressed={confirmingCancel}
+          title={confirmingCancel ? "Cerrar cancelación" : "Cancelar juntada"}
+          className={`${iconButtonBaseClass} ${
+            confirmingCancel
+              ? activeEditButtonClass
+              : `${inactiveIconButtonClass} hover:bg-clay/10 hover:text-clay`
+          }`}
+          onClick={() => togglePanel("cancel")}
+        >
+          <XIcon />
+        </button>
       </div>
 
       {showSuccess && state.status === "success" && state.message && (
         <p aria-live="polite" className={successClassName}>
           {state.message}
         </p>
+      )}
+
+      {confirmingCancel && (
+        <form
+          action={cancelDay}
+          className="mt-3 basis-full rounded-2xl border border-coral-200 bg-coral-100/60 px-4 py-3.5"
+        >
+          <input type="hidden" name="dayId" value={day.id} />
+          <p className="text-sm leading-relaxed text-ink">
+            ¿Cancelás esta juntada? Le avisamos por mail a quienes ya venían. Si querés, contales
+            por qué — no hace falta.
+          </p>
+          <CancelReasonField id={cancelReasonId} name="cancellationReason" />
+          <div className="mt-3 flex gap-2.5">
+            <button type="button" className="btn-ghost" onClick={() => setPanel("none")}>
+              Dejarlo abierto
+            </button>
+            <PendingButton label="Sí, cancelar" pendingLabel="Cancelando…" />
+          </div>
+        </form>
       )}
 
       {editing && (
@@ -235,7 +259,7 @@ export function DayOwnerControls({
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             {state.status === "error" && <Feedback status={state.status} message={state.message} />}
-            <SaveButton />
+            <PendingButton label="Guardar cambios" pendingLabel="Guardando..." />
           </div>
         </form>
       )}

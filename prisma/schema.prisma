@@ -135,11 +135,11 @@ model PlacePhoto {
 }
 
 model AvailabilityRule {
-  id          String   @id @default(cuid())
-  hostId      String
-  weekdays    String // csv of 0(Sun)-6(Sat), e.g. "2,4"
-  startTime   String // "09:00"
-  endTime     String // "17:00"
+  id           String   @id @default(cuid())
+  hostId       String
+  weekdays     String // csv of 0(Sun)-6(Sat), e.g. "2,4"
+  startTime    String // "09:00"
+  endTime      String // "17:00"
   capacity     Int
   description  String   @default("")
   circleId     String? // null = all friends
@@ -155,20 +155,21 @@ model AvailabilityRule {
 }
 
 model CoworkDay {
-  id           String   @id @default(cuid())
-  hostId       String
-  placeId      String
-  date         String // "2026-07-21" (Argentina local)
-  startTime    String // "09:00"
-  endTime      String // "17:00"
-  capacity     Int
-  description  String   @default("")
-  status       String   @default("open") // open | cancelled
-  ruleId       String?
-  circleId     String?
-  audienceKind String   @default("friends") // friends | friends_of_friends; circleId overrides
-  reminderSent Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  id                 String   @id @default(cuid())
+  hostId             String
+  placeId            String
+  date               String // "2026-07-21" (Argentina local)
+  startTime          String // "09:00"
+  endTime            String // "17:00"
+  capacity           Int
+  description        String   @default("")
+  status             String   @default("open") // open | cancelled
+  cancellationReason String?
+  ruleId             String?
+  circleId           String?
+  audienceKind       String   @default("friends") // friends | friends_of_friends; circleId overrides
+  reminderSent       Boolean  @default(false)
+  createdAt          DateTime @default(now())
 
   host           User              @relation(fields: [hostId], references: [id], onDelete: Cascade)
   place          Place             @relation(fields: [placeId], references: [id], onDelete: Cascade)

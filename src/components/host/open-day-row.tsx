@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { cancelDay, removeAttendee, updateDay } from "@/lib/actions";
 import { audienceLabel } from "@/lib/audience";
 import { formatDay } from "@/lib/tz";
 import { userProfilePath } from "@/lib/profile";
 import { Avatar, AvatarStack } from "@/components/avatar";
+import { CancelReasonField } from "@/components/cancel-reason-field";
 import { SpotsChip } from "@/components/day-card";
 import { NumberStepper } from "@/components/host/number-stepper";
 import { PencilIcon, XIcon } from "@/components/host/icons";
@@ -95,6 +96,7 @@ export function OpenDayRow({
   const [busy, startTransition] = useTransition();
   const [actionError, setActionError] = useState("");
   const [saved, setSaved] = useState("");
+  const cancelReasonRef = useRef<HTMLTextAreaElement>(null);
 
   const taken = day.attendees.length;
   const names = day.attendees.map((person) => firstName(person.name));
@@ -150,24 +152,30 @@ export function OpenDayRow({
             ) : (
               <>
                 ¿Cancelás este día? Le avisamos por mail a{" "}
-                <strong className="font-semibold">{nameList(names)}</strong>. No tenés que explicar
-                nada.
+                <strong className="font-semibold">{nameList(names)}</strong>. Si querés, contales
+                por qué — no hace falta.
               </>
             )}
           </p>
-          <div className="flex gap-2.5">
-            <button type="button" className="btn-ghost" disabled={busy} onClick={() => setMode("row")}>
-              Dejarlo abierto
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={busy}
-              onClick={() => run(cancelDay, { dayId: day.id })}
-            >
-              {busy ? "Cancelando…" : "Sí, cancelar"}
-            </button>
-          </div>
+        </div>
+        <CancelReasonField id={`day-${day.id}-cancel-reason`} ref={cancelReasonRef} />
+        <div className="mt-3 flex gap-2.5">
+          <button type="button" className="btn-ghost" disabled={busy} onClick={() => setMode("row")}>
+            Dejarlo abierto
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={busy}
+            onClick={() =>
+              run(cancelDay, {
+                dayId: day.id,
+                cancellationReason: cancelReasonRef.current?.value ?? "",
+              })
+            }
+          >
+            {busy ? "Cancelando…" : "Sí, cancelar"}
+          </button>
         </div>
         {actionError && (
           <p aria-live="polite" className="mt-2 text-sm font-bold text-clay">

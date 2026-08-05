@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { extendedFriendIdsOf, friendIdsOf } from "@/lib/friends";
 import { AUDIENCE_FRIENDS, AUDIENCE_FRIENDS_OF_FRIENDS } from "@/lib/audience";
 import { addDays, currentTimeBA, todayBA, weekdayOf } from "@/lib/tz";
+import { hasEnded, upcomingDayWhere } from "@/lib/day-window";
 
 export const MATERIALIZE_HORIZON_DAYS = 21; // 3 weeks, per spec
 
@@ -81,7 +82,7 @@ export async function syncOpenDayAudiences() {
     where: {
       circleId: null,
       status: "open",
-      date: { gte: todayBA() },
+      ...upcomingDayWhere(),
     },
     select: {
       id: true,
@@ -113,6 +114,10 @@ export async function materializeRules() {
   const nowTime = currentTimeBA();
   for (const rule of rules) {
     const weekdays = new Set(rule.weekdays.split(",").map(Number));
+    // Deliberately by date alone, not upcomingDayWhere: this asks which
+    // instances already exist so the loop below does not duplicate them, which
+    // includes today's even after it has ended. Narrowing it to upcoming days
+    // would drop today's out of `have` and invite a duplicate.
     const existing = await prisma.coworkDay.findMany({
       where: { ruleId: rule.id, date: { gte: today } },
       select: {
@@ -133,7 +138,7 @@ export async function materializeRules() {
 
     for (let i = 0; i <= MATERIALIZE_HORIZON_DAYS; i++) {
       const date = addDays(today, i);
-      if (date === today && rule.endTime <= nowTime) continue;
+      if (hasEnded(date, rule.endTime, today, nowTime)) continue;
       if (!weekdays.has(weekdayOf(date)) || have.has(date)) continue;
       await createDay({
         hostId: rule.hostId,

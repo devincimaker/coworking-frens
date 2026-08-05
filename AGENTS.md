@@ -9,6 +9,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 `AGENTS.md` is the single source of truth for repository instructions. `CLAUDE.md`
 imports it with `@AGENTS.md`; keep shared guidance here instead of duplicating it.
 
+## Linear Integration
+
+- **Workspace**: fioris
+- **Team**: Frens
+- **Project URL**: https://linear.app/fioris/team/FREN/all
+- **Issue Identifier**: FREN
+
+`/start FREN-NN` reads an issue, moves it to In Progress, creates and enters its
+worktree, then plans the change with you.
+
 ## Git and worktrees
 
 - Working directly in the primary checkout, including on `main`, is allowed. Do not
@@ -19,6 +29,9 @@ imports it with `@AGENTS.md`; keep shared guidance here instead of duplicating i
   request to create and use one. Infer a concise `feature/<slug>` or `fix/<slug>`
   branch from the task unless the user provides a branch name. Ask only when neither
   the task nor a usable branch name is clear.
+- When the work comes from a Linear issue, fold the identifier into that same
+  convention: `fix/fren-14-<slug>` or `feature/fren-5-<slug>`. Do not use Linear's
+  suggested `gitBranchName` (`devincimaker/fren-14-…`); it does not match this repo.
 - Before editing, inspect `git status --short`, the current branch, and
   `git worktree list` so existing work is preserved.
 - Create an isolated feature checkout with
@@ -43,9 +56,15 @@ imports it with `@AGENTS.md`; keep shared guidance here instead of duplicating i
   isolated without a slow fresh install.
 - If the project gains another long-running local server, extend the allocator and
   `.env.worktree` metadata so every linked checkout gets a distinct port for it.
-- When asked to publish work, commit only the current task's changes, push the
-  worktree branch, and open a PR. Merge only when the user asks, then run cleanup
-  from the primary checkout.
+- **When the user says push, push — do not counter-propose.** Work sitting in the
+  primary checkout on `main` gets committed and pushed straight to `main`: no new
+  branch, no PR, no asking first. `main` deploying is the point, not a reason to
+  route around it. Inventing a branch just leaves the user holding one more thing
+  to remember to merge.
+- Work started in a linked worktree is already on its own branch, so there push
+  the branch and open a PR. Merge it when asked, first time, without re-opening
+  the question. Then run cleanup from the primary checkout.
+- Either way, commit only the current task's changes.
 
 ## Theming
 

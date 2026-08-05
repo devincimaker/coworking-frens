@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { friendIdsOf } from "@/lib/friends";
-import { todayBA } from "@/lib/tz";
+import { pastDayWhere, upcomingDayWhere } from "@/lib/day-window";
 
 export const dayInclude = {
   host: { select: { id: true, name: true, image: true, email: true } },
@@ -17,7 +17,7 @@ export async function feedDays(userId: string) {
   return prisma.coworkDay.findMany({
     where: {
       status: "open",
-      date: { gte: todayBA() },
+      ...upcomingDayWhere(),
       OR: [{ hostId: userId }, { audience: { some: { userId } } }],
     },
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
@@ -45,7 +45,7 @@ export async function dayForUser(dayId: string, userId: string) {
  * friends would hear about a new day, and the invite link shown when that's zero.
  */
 export async function hostData(userId: string) {
-  const today = todayBA();
+  const upcoming = upcomingDayWhere();
   const [place, rules, days, friendIds, user] = await Promise.all([
     prisma.place.findUnique({
       where: { hostId: userId },
@@ -55,12 +55,12 @@ export async function hostData(userId: string) {
       where: { hostId: userId },
       include: {
         circle: { select: { id: true, name: true } },
-        _count: { select: { days: { where: { status: "open", date: { gte: today } } } } },
+        _count: { select: { days: { where: { status: "open", ...upcoming } } } },
       },
       orderBy: { createdAt: "asc" },
     }),
     prisma.coworkDay.findMany({
-      where: { hostId: userId, date: { gte: today }, status: "open" },
+      where: { hostId: userId, status: "open", ...upcoming },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
       include: dayInclude,
     }),
@@ -108,7 +108,7 @@ export async function hostedJuntadasFor(personIds: string[]): Promise<Map<string
     where: {
       hostId: { in: personIds },
       status: "open",
-      date: { lt: todayBA() },
+      ...pastDayWhere(),
       attendances: { some: {} },
     },
     _count: { _all: true },
