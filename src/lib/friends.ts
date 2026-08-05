@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AUDIENCE_FRIENDS, AUDIENCE_FRIENDS_OF_FRIENDS } from "@/lib/audience";
-import { todayBA } from "@/lib/tz";
+import { upcomingDayWhere } from "@/lib/day-window";
 
 export const FRIEND_REQUEST_PENDING = "pending";
 export const FRIEND_REQUEST_ACCEPTED = "accepted";
@@ -85,7 +85,7 @@ async function addOpenAllFriendsAudience(
       circleId: null,
       audienceKind: AUDIENCE_FRIENDS,
       status: "open",
-      date: { gte: todayBA() },
+      ...upcomingDayWhere(),
     },
     select: { id: true },
   });
@@ -108,7 +108,7 @@ async function removeOpenAllFriendsAudience(
       circleId: null,
       audienceKind: AUDIENCE_FRIENDS,
       status: "open",
-      date: { gte: todayBA() },
+      ...upcomingDayWhere(),
     },
     select: { id: true },
   });
@@ -142,7 +142,7 @@ async function reconcileFofDayAudiences(db: FriendStore, u1: string, u2: string)
       hostId: { in: hostIds },
       audienceKind: AUDIENCE_FRIENDS_OF_FRIENDS,
       status: "open",
-      date: { gte: todayBA() },
+      ...upcomingDayWhere(),
     },
     select: { id: true, hostId: true, audience: { select: { userId: true } } },
   });
