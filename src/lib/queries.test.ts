@@ -6,9 +6,13 @@ const prismaMock = vi.hoisted(() => ({
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/friends", () => ({ friendIdsOf: vi.fn() }));
-vi.mock("@/lib/tz", () => ({ todayBA: () => "2026-07-30" }));
+vi.mock("@/lib/tz", () => ({
+  todayBA: () => "2026-07-30",
+  currentTimeBA: () => "14:00",
+}));
 
 import { hostedJuntadasFor } from "./queries";
+import { pastDayWhere } from "./day-window";
 
 describe("hostedJuntadasFor", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -28,16 +32,18 @@ describe("hostedJuntadasFor", () => {
 
   /**
    * A cancelled day was never received and one still to come has not been
-   * either, so neither may inflate the number.
+   * either, so neither may inflate the number. "Still to come" is decided by
+   * the end time, not the date: today's juntada that finished at 13:00 counts
+   * from 13:00, without waiting for midnight.
    */
-  it("only counts days that already happened and were not cancelled", async () => {
+  it("only counts days that already ended and were not cancelled", async () => {
     prismaMock.coworkDay.groupBy.mockResolvedValue([]);
 
     await hostedJuntadasFor(["valen"]);
 
     const where = prismaMock.coworkDay.groupBy.mock.calls[0][0].where;
     expect(where.status).toBe("open");
-    expect(where.date).toEqual({ lt: "2026-07-30" });
+    expect(where.OR).toEqual(pastDayWhere().OR);
   });
 
   /**

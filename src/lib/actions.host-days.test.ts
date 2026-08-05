@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const requireOnboardedUserMock = vi.hoisted(() => vi.fn());
 const sendEmailMock = vi.hoisted(() => vi.fn());
@@ -35,6 +35,18 @@ vi.mock("@/lib/days", () => ({
 import { cancelDay, createOneOffDay, updateDay } from "./actions";
 import { todayBA } from "./tz";
 
+// Pinned to 12:00 in Buenos Aires. These fixtures open juntadas for *today*,
+// and a juntada is refused once its end time has gone by, so a real clock would
+// fail the whole file from 17:00 onwards.
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-07-28T15:00:00Z"));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 function formData(values: Record<string, string>) {
   const data = new FormData();
   for (const [key, value] of Object.entries(values)) data.set(key, value);
@@ -57,6 +69,15 @@ function openDayRow(overrides: Record<string, unknown> = {}) {
     place: { nickname: "El Nido" },
     attendances: [],
     ...overrides,
+  };
+}
+
+function createdDay(audience: { userId: string; email: string }[] = []) {
+  return {
+    id: "day_1",
+    description: "",
+    place: { nickname: "El Nido" },
+    audience: audience.map(({ userId, email }) => ({ userId, user: { email } })),
   };
 }
 
@@ -198,15 +219,6 @@ describe("createOneOffDay audience selection", () => {
     description: "",
   });
 
-  function createdDay(audience: { userId: string; email: string }[]) {
-    return {
-      id: "day_1",
-      description: "",
-      place: { nickname: "El Nido" },
-      audience: audience.map(({ userId, email }) => ({ userId, user: { email } })),
-    };
-  }
-
   beforeEach(() => {
     vi.clearAllMocks();
     requireOnboardedUserMock.mockResolvedValue({
@@ -282,5 +294,78 @@ describe("createOneOffDay audience selection", () => {
 
     expect(result).toEqual({ status: "error", message: "Ese círculo no está disponible." });
     expect(createDayMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The date guard lets today through, which is right — most juntadas are opened
+ * for today. What it cannot see is the time: at 12:00, a 07:00–09:00 slot for
+ * today would be born past, visible to nobody and joinable by nobody.
+ */
+describe("a juntada may not be born past", () => {
+  const baseForm = () => ({
+    date: "2026-07-28",
+    startTime: "07:00",
+    endTime: "09:00",
+    capacity: "4",
+    description: "",
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requireOnboardedUserMock.mockResolvedValue({
+      id: "me",
+      name: "Ana Dev",
+      email: "ana@example.com",
+    });
+    friendIdsOfMock.mockResolvedValue([]);
+  });
+
+  it("refuses a one-off whose end time already went by", async () => {
+    const result = await createOneOffDay({ status: "idle", message: "" }, formData(baseForm()));
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Ese horario ya pasó: elegí uno más tarde.",
+    });
+    expect(createDayMock).not.toHaveBeenCalled();
+  });
+
+  it("allows one that still has time left today", async () => {
+    createDayMock.mockResolvedValue(createdDay());
+
+    const result = await createOneOffDay(
+      { status: "idle", message: "" },
+      formData({ ...baseForm(), startTime: "14:00", endTime: "18:00" })
+    );
+
+    expect(result).not.toMatchObject({ status: "error" });
+    expect(createDayMock).toHaveBeenCalled();
+  });
+
+  /** The boundary: ending exactly now is over, so it is refused. */
+  it("refuses one ending at this very minute", async () => {
+    const result = await createOneOffDay(
+      { status: "idle", message: "" },
+      formData({ ...baseForm(), startTime: "09:00", endTime: "12:00" })
+    );
+
+    expect(result).toMatchObject({ message: "Ese horario ya pasó: elegí uno más tarde." });
+    expect(createDayMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses moving an existing juntada into a slot that has gone by", async () => {
+    prismaMock.coworkDay.findFirst.mockResolvedValue(openDayRow({ date: "2026-07-28" }));
+
+    const result = await updateDay(
+      { status: "idle", message: "" },
+      formData({ ...baseForm(), dayId: "day_1" })
+    );
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Ese horario ya pasó: elegí uno más tarde.",
+    });
+    expect(prismaMock.coworkDay.update).not.toHaveBeenCalled();
   });
 });

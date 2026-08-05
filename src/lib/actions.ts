@@ -38,6 +38,7 @@ import {
 import { CIRCLE_NAME_MAX, type CreateCircleState } from "@/lib/circles";
 import { MAX_DAY_CAPACITY } from "@/lib/place";
 import { formatDay, todayBA, weekdayOf, WEEKDAY_PLURAL } from "@/lib/tz";
+import { hasEnded, upcomingDayWhere } from "@/lib/day-window";
 import { appUrl } from "@/lib/url";
 
 const first = (name: string | null) => name?.split(" ")[0] ?? "Alguien";
@@ -370,6 +371,11 @@ export async function createOneOffDay(
     return { status: "error", message: "Revisá el horario: la hora de cierre va después." };
   }
   const { startTime, endTime } = times;
+  // The date guard above lets today through, so an evening host can still ask
+  // for a 09:00–13:00 slot today: a juntada born past, which nobody could join.
+  if (hasEnded(date, endTime)) {
+    return { status: "error", message: "Ese horario ya pasó: elegí uno más tarde." };
+  }
   const capacity = parseCapacity(formData.get("capacity"));
   const descriptionResult = normalizeDayDescription(formData.get("description"));
   if (!descriptionResult.ok) return { status: "error", message: descriptionResult.message };
@@ -439,7 +445,7 @@ export async function updateDay(
   const today = todayBA();
   const dayId = String(formData.get("dayId") ?? "");
   const day = await prisma.coworkDay.findFirst({
-    where: { id: dayId, hostId: user.id, status: "open", date: { gte: today } },
+    where: { id: dayId, hostId: user.id, status: "open", ...upcomingDayWhere() },
     include: { attendances: { include: { user: true } }, place: true },
   });
   if (!day) return { status: "error", message: "No encontré esa juntada abierta." };
@@ -456,6 +462,11 @@ export async function updateDay(
     return { status: "error", message: "Revisá el horario: la hora de cierre va después." };
   }
   const { startTime, endTime } = times;
+  // Same reason as createOneOffDay: moving a juntada to a slot that has already
+  // gone by would strand the people already sitting on it.
+  if (hasEnded(date, endTime, today)) {
+    return { status: "error", message: "Ese horario ya pasó: elegí uno más tarde." };
+  }
   const descriptionResult = normalizeDayDescription(formData.get("description"));
   if (!descriptionResult.ok) return { status: "error", message: descriptionResult.message };
 
@@ -578,7 +589,7 @@ export async function joinDay(formData: FormData) {
       where: {
         id: dayId,
         status: "open",
-        date: { gte: todayBA() },
+        ...upcomingDayWhere(),
         hostId: { not: user.id },
         audience: { some: { userId: user.id } },
       },
@@ -608,7 +619,7 @@ export async function leaveDay(formData: FormData) {
   if (!attendance) return;
   await prisma.attendance.delete({ where: { id: attendance.id } });
   const { day } = attendance;
-  if (day.status === "open" && day.date >= todayBA()) {
+  if (day.status === "open" && !hasEnded(day.date, day.endTime)) {
     await sendEmail(
       [day.host.email],
       `${first(user.name)} no va a poder ${formatDay(day.date)}`,
@@ -816,7 +827,7 @@ export async function createRule(
 /** Deleting a rule cancels its future instances and notifies attendees. */
 async function cancelFutureInstances(ruleId: string, hostName: string | null) {
   const days = await prisma.coworkDay.findMany({
-    where: { ruleId, status: "open", date: { gte: todayBA() } },
+    where: { ruleId, status: "open", ...upcomingDayWhere() },
     include: { attendances: { include: { user: true } }, place: true },
   });
   for (const day of days) {

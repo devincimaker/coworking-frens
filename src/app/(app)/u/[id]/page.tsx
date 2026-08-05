@@ -13,7 +13,8 @@ import {
 import { HostTag } from "@/components/host-tag";
 import { dayInclude, hostedJuntadasFor } from "@/lib/queries";
 import { prisma } from "@/lib/prisma";
-import { formatDay, todayBA } from "@/lib/tz";
+import { formatDay } from "@/lib/tz";
+import { upcomingDayWhere } from "@/lib/day-window";
 import {
   acceptFriendRequest,
   declineFriendRequest,
@@ -158,7 +159,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
       where: {
         hostId: profile.id,
         status: "open",
-        date: { gte: todayBA() },
+        ...upcomingDayWhere(),
         OR: [{ hostId: viewerId }, { audience: { some: { userId: viewerId } } }],
       },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],

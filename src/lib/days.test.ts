@@ -32,6 +32,7 @@ vi.mock("@/lib/friends", () => ({
 }));
 
 import { createDay, materializeRules } from "./days";
+import { upcomingDayWhere } from "./day-window";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -160,6 +161,34 @@ describe("materializeRules", () => {
     ]);
   });
 
+  /**
+   * The mirror of the test above, and the reason the end time matters rather
+   * than the date: at 12:00 a rule that runs 07:00–09:00 has already had its
+   * turn today, so today's instance would be born past. Next week's is fine.
+   */
+  it("skips today's recurring instance once the rule's end time has passed", async () => {
+    prismaMock.availabilityRule.findMany.mockResolvedValue([
+      {
+        id: "rule_1",
+        hostId: "host",
+        weekdays: "2",
+        startTime: "07:00",
+        endTime: "09:00",
+        capacity: 4,
+        description: "",
+        circleId: null,
+      },
+    ]);
+
+    await materializeRules();
+
+    expect(prismaMock.coworkDay.create.mock.calls.map((call) => call[0].data.date)).toEqual([
+      "2026-08-04",
+      "2026-08-11",
+      "2026-08-18",
+    ]);
+  });
+
   it("adds current friends to already-open all-friends one-off days", async () => {
     friendIdsOfMock.mockResolvedValue(["old_friend", "new_friend"]);
     prismaMock.coworkDay.findMany.mockResolvedValue([
@@ -176,7 +205,7 @@ describe("materializeRules", () => {
       where: {
         circleId: null,
         status: "open",
-        date: { gte: "2026-07-28" },
+        ...upcomingDayWhere(),
       },
       select: {
         id: true,

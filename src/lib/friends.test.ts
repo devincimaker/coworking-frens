@@ -62,6 +62,7 @@ import {
   unseenIncomingFriendRequestCount,
   unseenJuntadasFriendRequests,
 } from "./friends";
+import { upcomingDayWhere } from "./day-window";
 
 const sharedDay = {
   id: "day_1",
@@ -219,7 +220,7 @@ describe("friend request helpers", () => {
         circleId: null,
         audienceKind: "friends",
         status: "open",
-        date: { gte: "2026-07-28" },
+        ...upcomingDayWhere(),
       },
       select: { id: true },
     });
@@ -229,7 +230,7 @@ describe("friend request helpers", () => {
         circleId: null,
         audienceKind: "friends",
         status: "open",
-        date: { gte: "2026-07-28" },
+        ...upcomingDayWhere(),
       },
       select: { id: true },
     });
@@ -591,7 +592,7 @@ describe("friend request helpers", () => {
         hostId: { in: expect.arrayContaining(["me", "friend"]) },
         audienceKind: "friends_of_friends",
         status: "open",
-        date: { gte: "2026-07-28" },
+        ...upcomingDayWhere(),
       },
       select: { id: true, hostId: true, audience: { select: { userId: true } } },
     });
