@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { makeFriends } from "@/lib/friends";
+import { AUDIENCE_FRIENDS_OF_FRIENDS } from "@/lib/audience";
 import { createDay, materializeRules } from "@/lib/days";
 import { TERMS_VERSION } from "@/lib/terms";
 import { addDays, todayBA } from "@/lib/tz";
@@ -49,10 +50,20 @@ export async function GET() {
     "https://i.pravatar.cc/160?u=lea",
     "Escribo mejor con silencio, mate y playlists tranquilas."
   );
+  // Valen is friends with Marco only: she reaches Ana's friends-of-friends day
+  // through that single hop and nothing else of Ana's.
+  const valen = await mk(
+    "valen@test.dev",
+    "Valen Ortiz",
+    "valenortiz",
+    "https://i.pravatar.cc/160?u=valenortiz",
+    "Front-end y cerámica; laburo mejor con gente cerca."
+  );
 
   await makeFriends(ana.id, marco.id);
   await makeFriends(ana.id, lea.id);
   await makeFriends(marco.id, lea.id);
+  await makeFriends(valen.id, marco.id);
 
   await prisma.place.upsert({
     where: { hostId: ana.id },
@@ -103,6 +114,24 @@ export async function GET() {
       capacity: 2,
       description: "Deep work sin calls: auriculares, mate y una pausa corta al sol.",
       circleId: circle.id,
+    });
+  }
+
+  // Friends-of-friends one-off: Ana opens wide — Valen sees it via Marco.
+  const fofDescription = "Puertas abiertas: traé a esa amiga que siempre labura sola.";
+  const existingFofDay = await prisma.coworkDay.findFirst({
+    where: { hostId: ana.id, audienceKind: AUDIENCE_FRIENDS_OF_FRIENDS, date: { gte: todayBA() } },
+  });
+  if (!existingFofDay) {
+    await createDay({
+      hostId: ana.id,
+      date: addDays(todayBA(), 2),
+      startTime: "10:00",
+      endTime: "17:00",
+      capacity: 4,
+      description: fofDescription,
+      circleId: null,
+      audienceKind: AUDIENCE_FRIENDS_OF_FRIENDS,
     });
   }
 
@@ -167,5 +196,5 @@ export async function GET() {
   }
 
   const days = await prisma.coworkDay.count();
-  return NextResponse.json({ ok: true, users: 3, coworkDays: days });
+  return NextResponse.json({ ok: true, users: 4, coworkDays: days });
 }

@@ -21,6 +21,7 @@ import {
   requestFriendFromSharedDay,
 } from "@/lib/friends";
 import { parseAmenityKeys } from "@/lib/amenities";
+import { AUDIENCE_FRIENDS, AUDIENCE_FRIENDS_OF_FRIENDS } from "@/lib/audience";
 import { createDay, materializeRules } from "@/lib/days";
 import {
   normalizeBio,
@@ -336,13 +337,20 @@ function normalizeDayDescription(raw: FormDataEntryValue | null) {
   return { ok: true as const, description };
 }
 
-async function assertOwnCircleOrNull(userId: string, raw: FormDataEntryValue | null) {
-  const circleId = String(raw ?? "") || null;
+// The composer's single "Quién puede venir" select: "" is every friend, the
+// friends-of-friends kind widens one hop, anything else must be a circle the
+// user owns. Circle ids are cuids, so the kind value cannot collide with one.
+async function parseAudience(userId: string, raw: FormDataEntryValue | null) {
+  const value = String(raw ?? "");
+  if (value === AUDIENCE_FRIENDS_OF_FRIENDS) {
+    return { audienceKind: AUDIENCE_FRIENDS_OF_FRIENDS, circleId: null };
+  }
+  const circleId = value || null;
   if (circleId) {
     const circle = await prisma.circle.findFirst({ where: { id: circleId, ownerId: userId } });
     if (!circle) throw new Error("Circle not found");
   }
-  return circleId;
+  return { audienceKind: AUDIENCE_FRIENDS, circleId };
 }
 
 export async function createOneOffDay(
@@ -365,9 +373,9 @@ export async function createOneOffDay(
   const capacity = parseCapacity(formData.get("capacity"));
   const descriptionResult = normalizeDayDescription(formData.get("description"));
   if (!descriptionResult.ok) return { status: "error", message: descriptionResult.message };
-  let circleId;
+  let audience;
   try {
-    circleId = await assertOwnCircleOrNull(user.id, formData.get("circleId"));
+    audience = await parseAudience(user.id, formData.get("audience"));
   } catch {
     return { status: "error", message: "Ese círculo no está disponible." };
   }
@@ -379,11 +387,20 @@ export async function createOneOffDay(
     endTime,
     capacity,
     description: descriptionResult.description,
-    circleId,
+    circleId: audience.circleId,
+    audienceKind: audience.audienceKind,
   });
 
+  // On a friends-of-friends day the audience includes people who never heard
+  // of the host; mail from a stranger reads as spam, so the announcement stays
+  // with direct friends and the rest discover the day in their feed.
+  let announceTo = day.audience;
+  if (audience.audienceKind === AUDIENCE_FRIENDS_OF_FRIENDS) {
+    const directFriendIds = new Set(await friendIdsOf(user.id));
+    announceTo = day.audience.filter((a) => directFriendIds.has(a.userId));
+  }
   await sendEmail(
-    day.audience.map((a) => a.user.email),
+    announceTo.map((a) => a.user.email),
     `${first(user.name)} abrió ${day.place.nickname} — ${formatDay(date)}`,
     `${user.name} abre una juntada para laburar en ${day.place.nickname} el ${formatDay(date)}, ${startTime}–${endTime}. ${capacity} lugares.${day.description ? `\n\nMood: ${day.description}` : ""}\n\nSumate: ${appUrl()}/day/${day.id}`
   );
@@ -746,9 +763,9 @@ export async function createRule(
   const capacity = parseCapacity(formData.get("capacity"));
   const descriptionResult = normalizeDayDescription(formData.get("description"));
   if (!descriptionResult.ok) return { status: "error", message: descriptionResult.message };
-  let circleId;
+  let audience;
   try {
-    circleId = await assertOwnCircleOrNull(user.id, formData.get("circleId"));
+    audience = await parseAudience(user.id, formData.get("audience"));
   } catch {
     return { status: "error", message: "Ese círculo no está disponible." };
   }
@@ -763,20 +780,26 @@ export async function createRule(
       endTime,
       capacity,
       description: descriptionResult.description,
-      circleId,
+      circleId: audience.circleId,
+      audienceKind: audience.audienceKind,
     },
   });
   await materializeRules();
 
-  const audience = circleId
+  // Friends-of-friends rules announce to direct friends only, same as one-off
+  // days: the wider audience discovers the instances in their feed.
+  const recipients = audience.circleId
     ? (
-        await prisma.circleMember.findMany({ where: { circleId }, include: { user: true } })
+        await prisma.circleMember.findMany({
+          where: { circleId: audience.circleId },
+          include: { user: true },
+        })
       ).map((m) => m.user)
     : await friendsOf(user.id);
   const dayNames = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
   const days = rule.weekdays.split(",").map((d) => dayNames[Number(d)]).join(", ");
   await sendEmail(
-    audience.map((u) => u.email),
+    recipients.map((u) => u.email),
     `${first(user.name)} abre su lugar los ${days}`,
     `${user.name} abrió ${place.nickname} para laburar todos los ${days}, ${startTime}–${endTime} (${capacity} lugares).${rule.description ? `\n\nMood: ${rule.description}` : ""}\n\nMirá las próximas juntadas: ${appUrl()}/juntadas`
   );

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { AUDIENCE_FRIENDS, AUDIENCE_FRIENDS_OF_FRIENDS } from "@/lib/audience";
 import { todayBA } from "@/lib/tz";
 
 export const FRIEND_REQUEST_PENDING = "pending";
@@ -67,8 +68,12 @@ async function upsertFriendship(db: FriendStore, u1: string, u2: string) {
   });
   await addOpenAllFriendsAudience(db, u1, u2);
   await addOpenAllFriendsAudience(db, u2, u1);
+  await reconcileFofDayAudiences(db, u1, u2);
 }
 
+// The pairwise helpers own only audienceKind "friends" days: for a
+// friends-of-friends day a single edge flip is not enough to know whether
+// someone stays reachable, so those days belong to reconcileFofDayAudiences.
 async function addOpenAllFriendsAudience(
   db: OpenAudienceStore,
   hostId: string,
@@ -78,6 +83,7 @@ async function addOpenAllFriendsAudience(
     where: {
       hostId,
       circleId: null,
+      audienceKind: AUDIENCE_FRIENDS,
       status: "open",
       date: { gte: todayBA() },
     },
@@ -100,6 +106,7 @@ async function removeOpenAllFriendsAudience(
     where: {
       hostId,
       circleId: null,
+      audienceKind: AUDIENCE_FRIENDS,
       status: "open",
       date: { gte: todayBA() },
     },
@@ -115,12 +122,105 @@ async function removeOpenAllFriendsAudience(
   });
 }
 
-export async function friendIdsOf(userId: string): Promise<string[]> {
-  const rows = await prisma.friendship.findMany({
+/**
+ * Rebuild the audience of every open friends-of-friends day whose reach the
+ * u1–u2 edge flip could have changed. Those hosts are exactly u1, u2 and the
+ * current friends of either: host H is affected iff u1 or u2 sits within one
+ * hop of H, and H's own edges to u1/u2 survive the flip, so the post-change
+ * friend lists still name every such H — in both directions. Deletes only
+ * DayAudience rows; Attendance is never touched here, same as the all-friends
+ * helpers above.
+ */
+async function reconcileFofDayAudiences(db: FriendStore, u1: string, u2: string) {
+  const [f1, f2] = await Promise.all([
+    friendIdsVia(db, u1),
+    friendIdsVia(db, u2),
+  ]);
+  const hostIds = Array.from(new Set([u1, u2, ...f1, ...f2]));
+  const days = await db.coworkDay.findMany({
+    where: {
+      hostId: { in: hostIds },
+      audienceKind: AUDIENCE_FRIENDS_OF_FRIENDS,
+      status: "open",
+      date: { gte: todayBA() },
+    },
+    select: { id: true, hostId: true, audience: { select: { userId: true } } },
+  });
+  if (days.length === 0) return;
+
+  // The pair's own friend lists were just fetched, so a day either of them
+  // hosts skips that half of the reach query. Writes are collected across all
+  // days into two statements — this runs inside the friendship transaction,
+  // where every extra round trip extends the lock.
+  const knownFriendIds = new Map([
+    [u1, f1],
+    [u2, f2],
+  ]);
+  const reachByHost = new Map<string, Set<string>>();
+  const missing: { dayId: string; userId: string }[] = [];
+  const stale: { dayId: string; userId: { in: string[] } }[] = [];
+  for (const day of days) {
+    let reach = reachByHost.get(day.hostId);
+    if (!reach) {
+      reach = await extendedFriendIdSetVia(db, day.hostId, knownFriendIds.get(day.hostId));
+      reachByHost.set(day.hostId, reach);
+    }
+    const current = new Set(day.audience.map((a) => a.userId));
+    for (const userId of reach) {
+      if (!current.has(userId)) missing.push({ dayId: day.id, userId });
+    }
+    const lost = [...current].filter((userId) => !reach.has(userId));
+    if (lost.length > 0) stale.push({ dayId: day.id, userId: { in: lost } });
+  }
+  if (missing.length > 0) {
+    await db.dayAudience.createMany({ data: missing, skipDuplicates: true });
+  }
+  if (stale.length > 0) {
+    await db.dayAudience.deleteMany({ where: { OR: stale } });
+  }
+}
+
+type FriendshipStore = Pick<typeof prisma, "friendship">;
+
+async function friendIdsVia(db: FriendshipStore, userId: string): Promise<string[]> {
+  const rows = await db.friendship.findMany({
     where: { OR: [{ aId: userId }, { bId: userId }] },
     select: { aId: true, bId: true },
   });
   return rows.map((r) => (r.aId === userId ? r.bId : r.aId));
+}
+
+async function extendedFriendIdSetVia(
+  db: FriendshipStore,
+  userId: string,
+  knownFriendIds?: string[]
+): Promise<Set<string>> {
+  const friendIds = knownFriendIds ?? (await friendIdsVia(db, userId));
+  if (friendIds.length === 0) return new Set();
+
+  const rows = await db.friendship.findMany({
+    where: { OR: [{ aId: { in: friendIds } }, { bId: { in: friendIds } }] },
+    select: { aId: true, bId: true },
+  });
+  const friendSet = new Set(friendIds);
+  const ids = new Set(friendIds);
+  for (const row of rows) {
+    // Rows were matched on either column, so credit whichever side is the
+    // friend; a row between two direct friends adds ids already present.
+    if (friendSet.has(row.aId)) ids.add(row.bId);
+    if (friendSet.has(row.bId)) ids.add(row.aId);
+  }
+  ids.delete(userId);
+  return ids;
+}
+
+export async function friendIdsOf(userId: string): Promise<string[]> {
+  return friendIdsVia(prisma, userId);
+}
+
+/** Direct friends plus friends of those friends, deduped, never the user. */
+export async function extendedFriendIdsOf(userId: string): Promise<string[]> {
+  return [...(await extendedFriendIdSetVia(prisma, userId))];
 }
 
 export async function friendsOf(userId: string) {
@@ -169,6 +269,7 @@ export async function removeFriendForUser(userId: string, friendId: string) {
     });
     await removeOpenAllFriendsAudience(tx, userId, friendId);
     await removeOpenAllFriendsAudience(tx, friendId, userId);
+    await reconcileFofDayAudiences(tx, userId, friendId);
 
     return true;
   });

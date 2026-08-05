@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
+import { AUDIENCE_FRIENDS_OF_FRIENDS, audienceLabel } from "@/lib/audience";
 import { accentFor, stripes } from "@/lib/accent";
 import { AmenityChips } from "@/components/amenity-chips";
 import { areaLabel } from "@/lib/place";
@@ -31,14 +32,11 @@ type DayWithRelations = {
     id: string;
     name: string;
   } | null;
+  audienceKind: string;
   attendances: { user: Person }[];
 };
 
 const firstName = (name: string | null | undefined) => name?.split(" ")[0] ?? "alguien";
-
-function audienceLabel(circleName?: string | null) {
-  return circleName ? `“${circleName}”` : "todos tus amigos";
-}
 
 function profileHref(profileUserId: string, viewerId: string) {
   return profileUserId === viewerId ? "/profile" : userProfilePath(profileUserId);
@@ -147,6 +145,11 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
   const shown = attendees.slice(0, 4);
   const extra = attendees.length - shown.length;
   const description = day.description.trim();
+  const hostLine = isHost
+    ? `para ${audienceLabel(day.audienceKind, day.circle?.name, "todos tus amigos")}`
+    : day.audienceKind === AUDIENCE_FRIENDS_OF_FRIENDS
+      ? "anfitrión · abre a amigos de amigos"
+      : "anfitrión";
 
   return (
     <div>
@@ -226,9 +229,7 @@ export function DayCard({ day, userId }: { day: DayWithRelations; userId: string
                   </>
                 )}
               </div>
-              <div className="font-mono text-[11px] text-faded">
-                {isHost ? `para ${audienceLabel(day.circle?.name)}` : "anfitrión"}
-              </div>
+              <div className="font-mono text-[11px] text-faded">{hostLine}</div>
             </div>
           </div>
           <AmenityChips keys={day.place.amenityKeys} limit={4} className="mt-3.5" />

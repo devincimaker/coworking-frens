@@ -2,6 +2,7 @@
 
 import { useActionState, useId, useRef, useState } from "react";
 import { openDay } from "@/lib/actions";
+import { AUDIENCE_FRIENDS_OF_FRIENDS } from "@/lib/audience";
 import {
   addDays,
   formatDayPhrase,
@@ -268,8 +269,9 @@ export function DayComposer({
             <label htmlFor={`${groupId}-circle`} className="label">
               Quién puede venir
             </label>
-            <select id={`${groupId}-circle`} name="circleId" defaultValue="" className="input">
+            <select id={`${groupId}-circle`} name="audience" defaultValue="" className="input">
               <option value="">Todos mis amigos</option>
+              <option value={AUDIENCE_FRIENDS_OF_FRIENDS}>Amigos de amigos</option>
               {circles.map((circle) => (
                 <option key={circle.id} value={circle.id}>
                   Solo “{circle.name}”

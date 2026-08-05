@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { cancelDay, removeAttendee, updateDay } from "@/lib/actions";
+import { audienceLabel } from "@/lib/audience";
 import { formatDay } from "@/lib/tz";
 import { userProfilePath } from "@/lib/profile";
 import { Avatar, AvatarStack } from "@/components/avatar";
@@ -99,7 +100,7 @@ export function OpenDayRow({
 
   const taken = day.attendees.length;
   const names = day.attendees.map((person) => firstName(person.name));
-  const audience = day.circleName ? `“${day.circleName}”` : "todos mis amigos";
+  const audience = audienceLabel(day.audienceKind, day.circleName, "todos mis amigos");
 
   // The composer above folds away while the editor is open — one editor at a
   // time. Confirming a cancel is a two-second detour and leaves it alone.

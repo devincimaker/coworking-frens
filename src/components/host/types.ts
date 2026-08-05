@@ -40,6 +40,7 @@ export type HostDayData = {
   capacity: number;
   description: string;
   circleName: string | null;
+  audienceKind: string;
   attendees: HostPerson[];
 };
 
@@ -52,6 +53,7 @@ export type HostRuleData = {
   description: string;
   active: boolean;
   circleName: string | null;
+  audienceKind: string;
   openDayCount: number;
 };
 

@@ -48,6 +48,7 @@ import {
   FRIEND_REQUEST_PENDING,
   acceptFriendRequestForUser,
   declineFriendRequestForUser,
+  extendedFriendIdsOf,
   friendConnectionStates,
   friendshipPair,
   markFriendRequestsShownInFriends,
@@ -83,6 +84,9 @@ describe("friend request helpers", () => {
     prismaMock.coworkDay.findMany.mockResolvedValue([]);
     prismaMock.dayAudience.createMany.mockResolvedValue({ count: 0 });
     prismaMock.dayAudience.deleteMany.mockResolvedValue({ count: 0 });
+    // Friendship flips reconcile open friends-of-friends days, which reads the
+    // pair's current friend lists; an empty graph is the quiet default.
+    prismaMock.friendship.findMany.mockResolvedValue([]);
   });
 
   it("normalizes friendship pairs lexicographically", () => {
@@ -213,6 +217,7 @@ describe("friend request helpers", () => {
       where: {
         hostId: "me",
         circleId: null,
+        audienceKind: "friends",
         status: "open",
         date: { gte: "2026-07-28" },
       },
@@ -222,6 +227,7 @@ describe("friend request helpers", () => {
       where: {
         hostId: "friend",
         circleId: null,
+        audienceKind: "friends",
         status: "open",
         date: { gte: "2026-07-28" },
       },
@@ -534,6 +540,109 @@ describe("friend request helpers", () => {
       },
       data: { status: FRIEND_REQUEST_ACCEPTED, respondedAt: expect.any(Date) },
     });
+  });
+
+  it("unions direct friends with their friends, deduped and never the user", async () => {
+    prismaMock.friendship.findMany
+      .mockResolvedValueOnce([
+        { aId: "ana", bId: "me" },
+        { aId: "beto", bId: "me" },
+      ])
+      .mockResolvedValueOnce([
+        { aId: "ana", bId: "carla" },
+        { aId: "beto", bId: "carla" },
+        { aId: "ana", bId: "me" },
+        { aId: "ana", bId: "beto" },
+      ]);
+
+    const ids = await extendedFriendIdsOf("me");
+
+    // carla appears once despite two paths; direct friends stay; "me" never does.
+    expect([...ids].sort()).toEqual(["ana", "beto", "carla"]);
+  });
+
+  it("short-circuits the extended lookup when the user has no friends", async () => {
+    prismaMock.friendship.findMany.mockResolvedValueOnce([]);
+
+    await expect(extendedFriendIdsOf("me")).resolves.toEqual([]);
+    expect(prismaMock.friendship.findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("widens open friends-of-friends days when a friendship forms", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-28T15:00:00Z"));
+    // Pairwise all-friends lookups find nothing; the reconcile pass finds the
+    // new friend's open friends-of-friends day.
+    prismaMock.coworkDay.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { id: "fof_day", hostId: "friend", audience: [] },
+      ]);
+    prismaMock.friendship.findMany
+      .mockResolvedValueOnce([{ aId: "friend", bId: "me" }]) // me's friends, post-flip
+      .mockResolvedValueOnce([{ aId: "friend", bId: "me" }]) // friend's friends
+      .mockResolvedValueOnce([{ aId: "friend", bId: "me" }]); // extended: edges of those friends
+
+    await makeFriends("me", "friend");
+
+    expect(prismaMock.coworkDay.findMany).toHaveBeenNthCalledWith(3, {
+      where: {
+        hostId: { in: expect.arrayContaining(["me", "friend"]) },
+        audienceKind: "friends_of_friends",
+        status: "open",
+        date: { gte: "2026-07-28" },
+      },
+      select: { id: true, hostId: true, audience: { select: { userId: true } } },
+    });
+    expect(prismaMock.dayAudience.createMany).toHaveBeenCalledWith({
+      data: [{ dayId: "fof_day", userId: "me" }],
+      skipDuplicates: true,
+    });
+  });
+
+  it("retracts a removed friend who has no surviving two-hop path", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-28T15:00:00Z"));
+    prismaMock.friendship.deleteMany.mockResolvedValue({ count: 1 });
+    prismaMock.coworkDay.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { id: "fof_day", hostId: "me", audience: [{ userId: "friend" }] },
+      ]);
+    // Post-removal both sides are friendless, so the extended set is empty.
+    prismaMock.friendship.findMany.mockResolvedValue([]);
+
+    await expect(removeFriendForUser("me", "friend")).resolves.toBe(true);
+
+    expect(prismaMock.dayAudience.deleteMany).toHaveBeenCalledWith({
+      where: { OR: [{ dayId: "fof_day", userId: { in: ["friend"] } }] },
+    });
+  });
+
+  it("keeps a removed friend who still reaches the day through a mutual friend", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-28T15:00:00Z"));
+    prismaMock.friendship.deleteMany.mockResolvedValue({ count: 1 });
+    prismaMock.coworkDay.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { id: "fof_day", hostId: "me", audience: [{ userId: "friend" }, { userId: "x" }] },
+      ]);
+    prismaMock.friendship.findMany
+      .mockResolvedValueOnce([{ aId: "me", bId: "x" }]) // me's friends, post-removal
+      .mockResolvedValueOnce([{ aId: "friend", bId: "x" }]) // friend's friends
+      .mockResolvedValueOnce([
+        { aId: "me", bId: "x" },
+        { aId: "friend", bId: "x" }, // friend stays reachable through x
+      ]);
+
+    await expect(removeFriendForUser("me", "friend")).resolves.toBe(true);
+
+    expect(prismaMock.dayAudience.deleteMany).not.toHaveBeenCalled();
+    expect(prismaMock.dayAudience.createMany).not.toHaveBeenCalled();
   });
 
   it("declines only pending requests addressed to the current user", async () => {

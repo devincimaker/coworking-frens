@@ -34,6 +34,7 @@ const day = {
   description: "",
   host: { id: "host", name: "Ana Suarez", image: null },
   circle: { id: "circle_1", name: "deep work" },
+  audienceKind: "friends",
   place: {
     nickname: "El Nido",
     address: "Gorriti 4380, Palermo",
@@ -65,6 +66,28 @@ describe("DayCard audience label", () => {
     expect(screen.getByText("anfitrión")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ana" })).toHaveAttribute("href", "/u/host");
     expect(screen.queryByRole("link", { name: /Lo hostea/ })).not.toBeInTheDocument();
+  });
+
+  it("names the friends-of-friends audience for the host", () => {
+    const fofDay = { ...day, circle: null, audienceKind: "friends_of_friends" };
+    render(<DayCard day={fofDay} userId="host" />);
+
+    expect(screen.getByText("para amigos de amigos")).toBeInTheDocument();
+  });
+
+  it("tells guests when a day is open to friends of friends", () => {
+    const fofDay = { ...day, circle: null, audienceKind: "friends_of_friends" };
+    render(<DayCard day={fofDay} userId="guest" />);
+
+    expect(screen.getByText("anfitrión · abre a amigos de amigos")).toBeInTheDocument();
+  });
+
+  it("keeps the plain host line on all-friends days", () => {
+    const friendsDay = { ...day, circle: null, audienceKind: "friends" };
+    render(<DayCard day={friendsDay} userId="guest" />);
+
+    expect(screen.getByText("anfitrión")).toBeInTheDocument();
+    expect(screen.queryByText(/amigos de amigos/)).not.toBeInTheDocument();
   });
 
   it("marks linked profile names with the shared hover affordance", () => {

@@ -55,6 +55,7 @@ const fullDay: HostDayData = {
   capacity: 2,
   description: "",
   circleName: null,
+  audienceKind: "friends",
   attendees: [
     { id: "u1", name: "Marco Gilardi", image: null, joinedLabel: "se sumó ayer" },
     { id: "u2", name: "Lea Ruiz", image: null, joinedLabel: "se sumó hoy" },
@@ -93,6 +94,21 @@ describe("the invite block", () => {
 
     expect(screen.queryByText("Cómo invitar gente")).not.toBeInTheDocument();
     expect(screen.queryByText("https://frens.test/invite/tok")).not.toBeInTheDocument();
+  });
+});
+
+describe("the composer's audience select", () => {
+  it("offers friends of friends between all-friends and the circles", () => {
+    renderHost({ circles: [{ id: "circle_1", name: "deep work" }] });
+
+    const select = screen.getByLabelText("Quién puede venir");
+    const labels = Array.from(select.querySelectorAll("option")).map(
+      (option) => option.textContent
+    );
+    expect(labels).toEqual(["Todos mis amigos", "Amigos de amigos", "Solo “deep work”"]);
+    expect(screen.getByRole("option", { name: "Amigos de amigos" })).toHaveValue(
+      "friends_of_friends"
+    );
   });
 });
 

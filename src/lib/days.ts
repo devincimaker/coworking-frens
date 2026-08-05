@@ -1,11 +1,16 @@
 import { prisma } from "@/lib/prisma";
-import { friendIdsOf } from "@/lib/friends";
+import { extendedFriendIdsOf, friendIdsOf } from "@/lib/friends";
+import { AUDIENCE_FRIENDS, AUDIENCE_FRIENDS_OF_FRIENDS } from "@/lib/audience";
 import { addDays, currentTimeBA, todayBA, weekdayOf } from "@/lib/tz";
 
 export const MATERIALIZE_HORIZON_DAYS = 21; // 3 weeks, per spec
 
 /** Audience rows are materialized for fast visibility checks, then kept in sync while days are open. */
-async function resolveAudience(hostId: string, circleId: string | null): Promise<string[]> {
+async function resolveAudience(
+  hostId: string,
+  audienceKind: string,
+  circleId: string | null
+): Promise<string[]> {
   if (circleId) {
     const members = await prisma.circleMember.findMany({
       where: { circleId, circle: { ownerId: hostId } },
@@ -13,6 +18,7 @@ async function resolveAudience(hostId: string, circleId: string | null): Promise
     });
     return members.map((m) => m.userId);
   }
+  if (audienceKind === AUDIENCE_FRIENDS_OF_FRIENDS) return extendedFriendIdsOf(hostId);
   return friendIdsOf(hostId);
 }
 
@@ -24,11 +30,13 @@ export async function createDay(opts: {
   capacity: number;
   description?: string;
   circleId: string | null;
+  audienceKind?: string;
   ruleId?: string;
 }) {
   const place = await prisma.place.findUnique({ where: { hostId: opts.hostId } });
   if (!place) throw new Error("Set up your place first");
-  const audience = await resolveAudience(opts.hostId, opts.circleId);
+  const audienceKind = opts.audienceKind ?? AUDIENCE_FRIENDS;
+  const audience = await resolveAudience(opts.hostId, audienceKind, opts.circleId);
   return prisma.coworkDay.create({
     data: {
       hostId: opts.hostId,
@@ -40,6 +48,7 @@ export async function createDay(opts: {
       description: opts.description ?? "",
       ruleId: opts.ruleId,
       circleId: opts.circleId,
+      audienceKind,
       audience: { create: audience.map((userId) => ({ userId })) },
     },
     include: { audience: { include: { user: true } }, host: true, place: true },
@@ -66,8 +75,8 @@ async function addMissingAudienceRows(days: AudienceDay[], audience: string[]) {
   }
 }
 
-/** Keep open all-friends days aligned with the host's current friend list. */
-export async function syncOpenAllFriendsDayAudiences() {
+/** Keep open non-circle days aligned with the host's current reach (friends, or friends of friends). */
+export async function syncOpenDayAudiences() {
   const days = await prisma.coworkDay.findMany({
     where: {
       circleId: null,
@@ -77,15 +86,17 @@ export async function syncOpenAllFriendsDayAudiences() {
     select: {
       id: true,
       hostId: true,
+      audienceKind: true,
       audience: { select: { userId: true } },
     },
   });
-  const audienceByHost = new Map<string, string[]>();
+  const audienceByHostKind = new Map<string, string[]>();
   for (const day of days) {
-    let audience = audienceByHost.get(day.hostId);
+    const cacheKey = `${day.hostId}:${day.audienceKind}`;
+    let audience = audienceByHostKind.get(cacheKey);
     if (!audience) {
-      audience = await friendIdsOf(day.hostId);
-      audienceByHost.set(day.hostId, audience);
+      audience = await resolveAudience(day.hostId, day.audienceKind, null);
+      audienceByHostKind.set(cacheKey, audience);
     }
     await addMissingAudienceRows([day], audience);
   }
@@ -93,7 +104,7 @@ export async function syncOpenAllFriendsDayAudiences() {
 
 /** Create missing CoworkDay instances for the next 3 weeks for all active rules (idempotent). */
 export async function materializeRules() {
-  await syncOpenAllFriendsDayAudiences();
+  await syncOpenDayAudiences();
 
   const rules = await prisma.availabilityRule.findMany({
     where: { active: true, host: { place: { isNot: null } } },
@@ -114,7 +125,10 @@ export async function materializeRules() {
     const have = new Set(existing.map((d) => d.date));
 
     if (rule.circleId) {
-      await addMissingAudienceRows(existing, await resolveAudience(rule.hostId, rule.circleId));
+      await addMissingAudienceRows(
+        existing,
+        await resolveAudience(rule.hostId, rule.audienceKind, rule.circleId)
+      );
     }
 
     for (let i = 0; i <= MATERIALIZE_HORIZON_DAYS; i++) {
@@ -129,6 +143,7 @@ export async function materializeRules() {
         capacity: rule.capacity,
         description: rule.description,
         circleId: rule.circleId,
+        audienceKind: rule.audienceKind,
         ruleId: rule.id,
       });
       have.add(date);

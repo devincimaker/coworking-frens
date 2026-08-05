@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { deleteRule, toggleRule } from "@/lib/actions";
+import { audienceLabel } from "@/lib/audience";
 import { WEEKDAY_LABELS } from "@/lib/tz";
 import { XIcon } from "@/components/host/icons";
 import type { HostRuleData } from "@/components/host/types";
@@ -16,7 +17,7 @@ export function RuleCard({ rule }: { rule: HostRuleData }) {
   const [busy, startTransition] = useTransition();
 
   const days = rule.weekdays.map((day) => WEEKDAY_LABELS[day]).join(" y ");
-  const audience = rule.circleName ? `“${rule.circleName}”` : "todos";
+  const audience = audienceLabel(rule.audienceKind, rule.circleName, "todos");
   const count = rule.openDayCount;
 
   // Pausing leaves whatever it already opened on the calendar, so the line has to

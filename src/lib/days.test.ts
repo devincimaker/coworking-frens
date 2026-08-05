@@ -20,6 +20,7 @@ const prismaMock = vi.hoisted(() => ({
 }));
 
 const friendIdsOfMock = vi.hoisted(() => vi.fn());
+const extendedFriendIdsOfMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/prisma", () => ({
   prisma: prismaMock,
@@ -27,6 +28,7 @@ vi.mock("@/lib/prisma", () => ({
 
 vi.mock("@/lib/friends", () => ({
   friendIdsOf: friendIdsOfMock,
+  extendedFriendIdsOf: extendedFriendIdsOfMock,
 }));
 
 import { createDay, materializeRules } from "./days";
@@ -88,7 +90,33 @@ describe("createDay", () => {
     expect(prismaMock.coworkDay.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         circleId: null,
+        audienceKind: "friends",
         audience: { create: [{ userId: "friend_1" }] },
+      }),
+      include: { audience: { include: { user: true } }, host: true, place: true },
+    });
+  });
+
+  it("resolves friends-of-friends days through the extended graph and stores the kind", async () => {
+    extendedFriendIdsOfMock.mockResolvedValue(["friend_1", "friend_of_friend"]);
+
+    await createDay({
+      hostId: "host",
+      date: "2026-07-28",
+      startTime: "09:00",
+      endTime: "17:00",
+      capacity: 4,
+      circleId: null,
+      audienceKind: "friends_of_friends",
+    });
+
+    expect(extendedFriendIdsOfMock).toHaveBeenCalledWith("host");
+    expect(friendIdsOfMock).not.toHaveBeenCalled();
+    expect(prismaMock.coworkDay.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        circleId: null,
+        audienceKind: "friends_of_friends",
+        audience: { create: [{ userId: "friend_1" }, { userId: "friend_of_friend" }] },
       }),
       include: { audience: { include: { user: true } }, host: true, place: true },
     });
@@ -153,6 +181,7 @@ describe("materializeRules", () => {
       select: {
         id: true,
         hostId: true,
+        audienceKind: true,
         audience: { select: { userId: true } },
       },
     });
@@ -160,6 +189,52 @@ describe("materializeRules", () => {
       data: [{ dayId: "one_off_today", userId: "new_friend" }],
       skipDuplicates: true,
     });
+  });
+
+  it("widens already-open friends-of-friends days through the extended graph", async () => {
+    friendIdsOfMock.mockResolvedValue(["direct_friend"]);
+    extendedFriendIdsOfMock.mockResolvedValue(["direct_friend", "second_hop"]);
+    prismaMock.coworkDay.findMany.mockResolvedValue([
+      {
+        id: "fof_day",
+        hostId: "host",
+        audienceKind: "friends_of_friends",
+        audience: [{ userId: "direct_friend" }],
+      },
+    ]);
+
+    await materializeRules();
+
+    expect(extendedFriendIdsOfMock).toHaveBeenCalledWith("host");
+    expect(prismaMock.dayAudience.createMany).toHaveBeenCalledWith({
+      data: [{ dayId: "fof_day", userId: "second_hop" }],
+      skipDuplicates: true,
+    });
+  });
+
+  it("passes a rule's audience kind through to the days it materializes", async () => {
+    extendedFriendIdsOfMock.mockResolvedValue(["friend_1", "second_hop"]);
+    prismaMock.availabilityRule.findMany.mockResolvedValue([
+      {
+        id: "rule_1",
+        hostId: "host",
+        weekdays: "2",
+        startTime: "09:00",
+        endTime: "17:00",
+        capacity: 4,
+        description: "",
+        circleId: null,
+        audienceKind: "friends_of_friends",
+      },
+    ]);
+
+    await materializeRules();
+
+    const created = prismaMock.coworkDay.create.mock.calls.map((call) => call[0].data);
+    expect(created.length).toBeGreaterThan(0);
+    for (const data of created) {
+      expect(data.audienceKind).toBe("friends_of_friends");
+    }
   });
 
   it("adds newly eligible circle members to already materialized open rule days", async () => {
